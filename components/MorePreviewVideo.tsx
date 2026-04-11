@@ -1,173 +1,96 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-type MorePreviewVideoProps = {
-  src: string;
-  label: string;
-};
+import { useRef, useState, useEffect, useMemo } from "react";
 
 export default function MorePreviewVideo({
   src,
-  label,
-}: MorePreviewVideoProps) {
+}: {
+  src: string;
+}) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hideTimerRef = useRef<number | null>(null);
-
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showControl, setShowControl] = useState(true);
+  const [showButton, setShowButton] = useState(true);
 
-  const startHideTimer = () => {
-    if (hideTimerRef.current) {
-      window.clearTimeout(hideTimerRef.current);
-    }
+  // 🔥 PNG thumbnail auto generate (same name)
+  const posterSrc = useMemo(() => {
+    return src.replace(/\.(mp4|webm|mov)$/i, ".png");
+  }, [src]);
 
-    hideTimerRef.current = window.setTimeout(() => {
-      if (videoRef.current && !videoRef.current.paused) {
-        setShowControl(false);
-      }
-    }, 900);
-  };
-
-  const showControlsBriefly = () => {
-    setShowControl(true);
-    startHideTimer();
-  };
-
-  const pauseAllOtherVideos = () => {
-    const allVideos = document.querySelectorAll(
-      "video[data-more-preview-video='true']"
-    );
-
-    allVideos.forEach((node) => {
-      const other = node as HTMLVideoElement;
-      if (other !== videoRef.current) {
-        other.pause();
-      }
-    });
-  };
-
-  const toggleVideo = async () => {
+  // 👉 autoplay only when clicked (performance fix)
+  const handleToggle = () => {
     const video = videoRef.current;
     if (!video) return;
 
-    setShowControl(true);
-
     if (video.paused) {
-      pauseAllOtherVideos();
-      video.muted = false;
+      video.play();
+      setIsPlaying(true);
 
-      try {
-        await video.play();
-        setIsPlaying(true);
-        startHideTimer();
-      } catch {
-        video.muted = true;
-        await video.play();
-        setIsPlaying(true);
-        startHideTimer();
-      }
+      // fade out button
+      setTimeout(() => setShowButton(false), 300);
     } else {
       video.pause();
       setIsPlaying(false);
-      setShowControl(true);
+      setShowButton(true);
     }
   };
 
+  // 👉 ensure only 1 video plays
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const handlePlay = () => {
-      setIsPlaying(true);
-      startHideTimer();
-    };
-
-    const handlePause = () => {
-      setIsPlaying(false);
-      setShowControl(true);
-      if (hideTimerRef.current) {
-        window.clearTimeout(hideTimerRef.current);
+    const handleGlobalPause = (e: any) => {
+      if (videoRef.current && videoRef.current !== e.detail) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+        setShowButton(true);
       }
     };
 
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setShowControl(true);
-      if (hideTimerRef.current) {
-        window.clearTimeout(hideTimerRef.current);
-      }
-    };
-
-    video.addEventListener("play", handlePlay);
-    video.addEventListener("pause", handlePause);
-    video.addEventListener("ended", handleEnded);
-
-    return () => {
-      video.removeEventListener("play", handlePlay);
-      video.removeEventListener("pause", handlePause);
-      video.removeEventListener("ended", handleEnded);
-
-      if (hideTimerRef.current) {
-        window.clearTimeout(hideTimerRef.current);
-      }
-    };
+    window.addEventListener("pause-other-videos", handleGlobalPause);
+    return () =>
+      window.removeEventListener("pause-other-videos", handleGlobalPause);
   }, []);
 
+  const handlePlay = () => {
+    window.dispatchEvent(
+      new CustomEvent("pause-other-videos", { detail: videoRef.current })
+    );
+  };
+
   return (
-    <div className="group relative overflow-hidden rounded-[28px] border border-black/8 bg-white/55 p-3 shadow-[0_12px_30px_rgba(0,0,0,0.07),inset_0_1px_0_rgba(255,255,255,0.75)]">
-      <div className="relative overflow-hidden rounded-[22px] bg-black">
-        <div
-          className={`pointer-events-none absolute inset-0 z-0 rounded-[22px] opacity-0 blur-3xl transition duration-300 ${
-            isPlaying ? "opacity-100" : "opacity-0"
-          } bg-gradient-to-br from-pink-300/20 via-sky-300/20 to-amber-300/20`}
-        />
+    <div className="relative w-full aspect-[9/16] rounded-3xl overflow-hidden bg-black">
+      
+      {/* VIDEO */}
+      <video
+        ref={videoRef}
+        src={src}
+        poster={posterSrc} // ✅ FIXED BLACK FRAME
+        className="w-full h-full object-cover"
+        preload="metadata"
+        playsInline
+        muted
+        onPlay={handlePlay}
+      />
 
-        <video
-          ref={videoRef}
-          src={src}
-          playsInline
-          preload="metadata"
-          controls={false}
-          data-more-preview-video="true"
-          className={`relative z-10 aspect-[9/16] w-full rounded-[22px] object-cover transition duration-300 ${
-            isPlaying ? "scale-[1.02]" : "scale-100"
-          }`}
-          onClick={toggleVideo}
-          onMouseMove={showControlsBriefly}
-          onMouseEnter={() => setShowControl(true)}
-        />
-
-        <button
-          type="button"
-          onClick={toggleVideo}
-          className="absolute inset-0 z-20 flex items-center justify-center"
-          aria-label={isPlaying ? "Pause video" : "Play video"}
-        >
-          <div
-            className={`flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-black/35 text-white backdrop-blur-md transition-all duration-300 ${
-              showControl
-                ? "opacity-100 scale-100"
-                : "pointer-events-none opacity-0 scale-90"
-            }`}
+      {/* PLAY BUTTON */}
+      <button
+        onClick={handleToggle}
+        className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
+          showButton ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <div className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center border border-white/20">
+          <svg
+            className="w-6 h-6 text-white"
+            fill="white"
+            viewBox="0 0 24 24"
           >
             {isPlaying ? (
-              <div className="flex gap-[5px]">
-                <span className="block h-5 w-[4px] rounded-sm bg-white" />
-                <span className="block h-5 w-[4px] rounded-sm bg-white" />
-              </div>
+              <path d="M6 5h4v14H6zm8 0h4v14h-4z" />
             ) : (
-              <div
-                className="ml-[3px] h-0 w-0 border-y-[10px] border-l-[16px] border-y-transparent border-l-white"
-              />
+              <path d="M5 3l14 9-14 9V3z" />
             )}
-          </div>
-        </button>
-      </div>
-
-      <div className="px-2 pb-1 pt-3 text-center text-sm font-medium text-black/65">
-        {label}
-      </div>
+          </svg>
+        </div>
+      </button>
     </div>
   );
 }

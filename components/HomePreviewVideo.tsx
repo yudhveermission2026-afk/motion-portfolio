@@ -1,181 +1,234 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-declare global {
-  interface WindowEventMap {
-    "pause-home-preview-videos": CustomEvent<{ id: string }>;
-    "mute-home-showreel": CustomEvent;
-  }
-}
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type GlowTheme = "pink" | "blue" | "green" | "orange";
 
 type HomePreviewVideoProps = {
   src: string;
-  label?: string;
+  label: string;
   glowTheme?: GlowTheme;
-};
-
-const glowMap: Record<GlowTheme, string> = {
-  pink: "bg-[radial-gradient(circle_at_center,rgba(236,72,153,0.38),rgba(244,114,182,0.20),transparent_72%)]",
-  blue: "bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.38),rgba(34,211,238,0.20),transparent_72%)]",
-  green:
-    "bg-[radial-gradient(circle_at_center,rgba(34,197,94,0.38),rgba(16,185,129,0.20),transparent_72%)]",
-  orange:
-    "bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.38),rgba(251,191,36,0.20),transparent_72%)]",
 };
 
 export default function HomePreviewVideo({
   src,
-  label = "",
+  label,
   glowTheme = "blue",
 }: HomePreviewVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const idRef = useRef(`home-preview-${Math.random().toString(36).slice(2)}`);
+  const hideTimerRef = useRef<number | null>(null);
 
+  const [isLoaded, setIsLoaded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showOverlayButton, setShowOverlayButton] = useState(true);
+  const [showControl, setShowControl] = useState(true);
 
-  const clearFadeTimeout = () => {
-    if (fadeTimeoutRef.current) {
-      clearTimeout(fadeTimeoutRef.current);
-      fadeTimeoutRef.current = null;
+  const posterSrc = useMemo(() => {
+    return src.replace(/\.(mp4|webm|mov|m4v)$/i, ".png");
+  }, [src]);
+
+  const glowMap: Record<GlowTheme, string> = {
+    pink: "from-pink-300/30 via-fuchsia-300/20 to-rose-300/25",
+    blue: "from-sky-300/30 via-cyan-300/20 to-blue-300/25",
+    green: "from-emerald-300/30 via-green-300/20 to-teal-300/25",
+    orange: "from-amber-300/30 via-orange-300/20 to-yellow-300/25",
+  };
+
+  const clearHideTimer = () => {
+    if (hideTimerRef.current) {
+      window.clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
     }
   };
 
-  const resetToPausedState = () => {
-    if (!videoRef.current) return;
-    videoRef.current.pause();
-    videoRef.current.currentTime = 0;
-    videoRef.current.muted = true;
-    setIsPlaying(false);
-    setShowOverlayButton(true);
-    clearFadeTimeout();
-  };
-
-  const showButtonTemporarily = () => {
-    setShowOverlayButton(true);
-    clearFadeTimeout();
-
-    fadeTimeoutRef.current = setTimeout(() => {
+  const startHideTimer = () => {
+    clearHideTimer();
+    hideTimerRef.current = window.setTimeout(() => {
       if (videoRef.current && !videoRef.current.paused) {
-        setShowOverlayButton(false);
+        setShowControl(false);
       }
     }, 900);
   };
 
-  const playVideo = async () => {
-    if (!videoRef.current) return;
+  const showControlsBriefly = () => {
+    setShowControl(true);
+    startHideTimer();
+  };
 
-    window.dispatchEvent(
-      new CustomEvent("pause-home-preview-videos", {
-        detail: { id: idRef.current },
-      })
+  const pauseAllHomeVideos = () => {
+    const allHomeVideos = document.querySelectorAll(
+      "video[data-home-preview-video='true']"
     );
 
-    window.dispatchEvent(new CustomEvent("mute-home-showreel"));
+    allHomeVideos.forEach((node) => {
+      const other = node as HTMLVideoElement;
+      if (other !== videoRef.current) {
+        other.pause();
+      }
+    });
 
-    videoRef.current.muted = false;
+    const showreel = document.querySelector(
+      "video[data-showreel-video='true']"
+    ) as HTMLVideoElement | null;
+
+    if (showreel) {
+      showreel.muted = true;
+    }
+  };
+
+  const playLoadedVideo = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    pauseAllHomeVideos();
+    video.muted = false;
 
     try {
-      await videoRef.current.play();
+      await video.play();
       setIsPlaying(true);
-      showButtonTemporarily();
+      startHideTimer();
     } catch {
-      setIsPlaying(false);
-      setShowOverlayButton(true);
+      video.muted = true;
+      await video.play();
+      setIsPlaying(true);
+      startHideTimer();
     }
   };
 
-  const togglePlayPause = async () => {
-    if (!videoRef.current) return;
+  const toggleVideo = async () => {
+    const video = videoRef.current;
+    setShowControl(true);
 
-    if (videoRef.current.paused) {
-      await playVideo();
+    if (!isLoaded) {
+      setIsLoaded(true);
+      return;
+    }
+
+    if (!video) return;
+
+    if (video.paused) {
+      await playLoadedVideo();
     } else {
-      resetToPausedState();
+      video.pause();
+      setIsPlaying(false);
+      setShowControl(true);
+      clearHideTimer();
     }
   };
 
   useEffect(() => {
-    const handlePauseOthers = (
-      event: WindowEventMap["pause-home-preview-videos"]
-    ) => {
-      if (event.detail?.id !== idRef.current) {
-        resetToPausedState();
-      }
+    if (!isLoaded) return;
+    playLoadedVideo();
+  }, [isLoaded]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handlePlay = () => {
+      setIsPlaying(true);
+      startHideTimer();
     };
 
-    window.addEventListener("pause-home-preview-videos", handlePauseOthers);
+    const handlePause = () => {
+      setIsPlaying(false);
+      setShowControl(true);
+      clearHideTimer();
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setShowControl(true);
+      clearHideTimer();
+    };
+
+    video.addEventListener("play", handlePlay);
+    video.addEventListener("pause", handlePause);
+    video.addEventListener("ended", handleEnded);
 
     return () => {
-      window.removeEventListener("pause-home-preview-videos", handlePauseOthers);
-      clearFadeTimeout();
+      video.removeEventListener("play", handlePlay);
+      video.removeEventListener("pause", handlePause);
+      video.removeEventListener("ended", handleEnded);
+      clearHideTimer();
     };
-  }, []);
-
-  useEffect(() => {
-    resetToPausedState();
-  }, [src]);
+  }, [isLoaded]);
 
   return (
-    <div
-      className={`group relative overflow-visible rounded-[24px] transition-all duration-500 ${
-        isPlaying ? "scale-[1.03]" : "hover:scale-[1.02]"
-      }`}
-      onClick={togglePlayPause}
-    >
+    <div className="group relative">
       <div
-        className={`pointer-events-none absolute -inset-5 z-0 transition-opacity duration-500 ${
-          isPlaying ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <div className={`absolute inset-0 rounded-[32px] blur-[42px] ${glowMap[glowTheme]}`} />
-      </div>
+        className={`pointer-events-none absolute -inset-3 rounded-[28px] bg-gradient-to-br opacity-60 blur-2xl transition duration-300 group-hover:opacity-100 ${glowMap[glowTheme]}`}
+      />
 
-      <div
-        className={`relative overflow-hidden rounded-[24px] border border-white/10 bg-zinc-900 transition-all duration-500 ${
-          isPlaying
-            ? "shadow-[0_0_50px_rgba(255,255,255,0.06)]"
-            : "shadow-[0_0_20px_rgba(255,255,255,0.03)]"
-        }`}
-      >
-        <video
-          ref={videoRef}
-          src={src}
-          playsInline
-          preload="metadata"
-          loop
-          className={`relative z-10 aspect-[9/16] w-full object-cover transition duration-500 ${
-            isPlaying ? "scale-[1.02]" : "group-hover:scale-[1.03]"
-          }`}
-        />
+      <div className="relative overflow-hidden rounded-[26px] border border-black/8 bg-white/68 p-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
+        <div className="relative overflow-hidden rounded-[20px] bg-black">
+          {!isLoaded ? (
+            <button
+              type="button"
+              onClick={toggleVideo}
+              className="relative flex aspect-[9/16] w-full items-center justify-center overflow-hidden rounded-[20px] bg-black"
+              aria-label="Play preview video"
+            >
+              <img
+                src={posterSrc}
+                alt={label}
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="lazy"
+              />
 
-        <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-black/10" />
 
-        <div
-          className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center transition-opacity duration-300 ${
-            showOverlayButton ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <div className="rounded-full border border-white/20 bg-black/65 p-4 text-white backdrop-blur-md">
-            {isPlaying ? (
-              <span className="block text-xl leading-none">❚❚</span>
-            ) : (
-              <span className="block text-xl leading-none">▶</span>
-            )}
-          </div>
+              <div className="relative z-20 flex h-12 w-12 items-center justify-center rounded-full border border-white/35 bg-black/35 text-white backdrop-blur-md transition duration-300 group-hover:scale-105">
+                <div className="ml-[3px] h-0 w-0 border-y-[8px] border-l-[14px] border-y-transparent border-l-white" />
+              </div>
+            </button>
+          ) : (
+            <>
+              <video
+                ref={videoRef}
+                src={src}
+                poster={posterSrc}
+                playsInline
+                preload="none"
+                controls={false}
+                data-home-preview-video="true"
+                className={`relative z-10 aspect-[9/16] w-full rounded-[20px] object-cover transition duration-300 ${
+                  isPlaying ? "scale-[1.008]" : "scale-100"
+                }`}
+                onClick={toggleVideo}
+                onMouseMove={showControlsBriefly}
+                onMouseEnter={() => setShowControl(true)}
+              />
+
+              <button
+                type="button"
+                onClick={toggleVideo}
+                className="absolute inset-0 z-20 flex items-center justify-center"
+                aria-label={isPlaying ? "Pause preview video" : "Play preview video"}
+              >
+                <div
+                  className={`flex h-12 w-12 items-center justify-center rounded-full border border-white/35 bg-black/35 text-white backdrop-blur-md transition-all duration-300 ${
+                    showControl
+                      ? "opacity-100 scale-100"
+                      : "pointer-events-none opacity-0 scale-90"
+                  }`}
+                >
+                  {isPlaying ? (
+                    <div className="flex gap-[4px]">
+                      <span className="block h-4 w-[3px] rounded-sm bg-white" />
+                      <span className="block h-4 w-[3px] rounded-sm bg-white" />
+                    </div>
+                  ) : (
+                    <div className="ml-[2px] h-0 w-0 border-y-[8px] border-l-[14px] border-y-transparent border-l-white" />
+                  )}
+                </div>
+              </button>
+            </>
+          )}
         </div>
 
-        {label ? (
-          <div className="absolute bottom-0 left-0 right-0 z-20 p-3">
-            <p className="text-xs uppercase tracking-[0.25em] text-white/45">
-              {label}
-            </p>
-          </div>
-        ) : null}
+        <div className="px-1 pt-2 text-center text-xs font-medium tracking-[0.25em] text-black/55 uppercase">
+          {label}
+        </div>
       </div>
     </div>
   );

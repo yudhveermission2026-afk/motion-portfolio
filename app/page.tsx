@@ -248,7 +248,6 @@ export default function Home() {
     <main className="min-h-screen bg-transparent text-black">
       <PageBackdrop />
 
-      {/* HERO */}
       <section className="relative px-6">
         <div className="flex min-h-screen items-center justify-center text-center">
           <div className="max-w-6xl">
@@ -270,7 +269,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SHOWREEL */}
       <section className="relative px-6 py-20">
         <div className="mx-auto flex max-w-6xl items-center justify-center">
           <div className="group relative h-[62vh] w-full overflow-hidden rounded-[36px] border border-black/8 bg-white shadow-[0_28px_70px_rgba(0,0,0,0.10)]">
@@ -280,6 +278,7 @@ export default function Home() {
               muted
               loop
               playsInline
+              data-showreel-video="true"
               className="absolute inset-0 h-full w-full object-cover transition-all duration-500 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-black/10" />
@@ -305,7 +304,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PROJECTS */}
       <section className="relative px-6 py-24">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
@@ -331,22 +329,26 @@ export default function Home() {
           <div className="space-y-16">
             {projectSections.map((section) => (
               <section key={section.key}>
-                <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <PastelPill
-                    className={`${section.pillClass} px-7 py-4 text-2xl md:text-3xl`}
-                    glowClass={section.glowClass}
-                  >
-                    {section.title}
-                  </PastelPill>
-
-                  <Link href={section.moreHref} onClick={saveScrollBeforeLeave}>
+                <div className="mb-8 grid grid-cols-2 items-center gap-4">
+                  <div className="justify-self-start">
                     <PastelPill
-                      className={`${section.pillClass} px-6 py-3`}
+                      className={`${section.pillClass} px-5 py-3 text-lg md:px-7 md:py-4 md:text-3xl`}
                       glowClass={section.glowClass}
                     >
-                      More
+                      {section.title}
                     </PastelPill>
-                  </Link>
+                  </div>
+
+                  <div className="justify-self-end">
+                    <Link href={section.moreHref} onClick={saveScrollBeforeLeave}>
+                      <PastelPill
+                        className={`${section.pillClass} px-5 py-3 md:px-6 md:py-3`}
+                        glowClass={section.glowClass}
+                      >
+                        More
+                      </PastelPill>
+                    </Link>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -365,7 +367,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ABOUT */}
       <section className="relative px-6 py-28">
         <div className="mx-auto max-w-6xl">
           <div className="grid items-start gap-12 md:grid-cols-[260px,1fr]">
@@ -420,7 +421,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SKILLS */}
       <section className="relative px-6 py-24">
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 flex justify-center">
@@ -503,6 +503,12 @@ export default function Home() {
                     src="/logos/gemini.svg"
                     glowClass="bg-sky-500/28"
                   />
+                  <ExactLogoCard
+                    href="https://minimax.io/"
+                    label="MiniMax"
+                    src="/logos/minimax.svg"
+                    glowClass="bg-orange-500/28"
+                  />
                 </div>
               </div>
             </GlassPanel>
@@ -548,7 +554,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CONTACT */}
       <section className="relative px-6 py-24 text-center">
         <div className="mb-6 flex justify-center">
           <PastelPill
