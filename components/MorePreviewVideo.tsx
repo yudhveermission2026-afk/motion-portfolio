@@ -18,7 +18,7 @@ export default function MorePreviewVideo({
   const [showControl, setShowControl] = useState(true);
 
   const previewSrc = useMemo(() => {
-    return src.replace(/\.(mp4|webm|mov|m4v)$/i, ".png");
+    return src.replace(/\/preview(\d+)\.mp4$/i, "/Preview$1.png");
   }, [src]);
 
   const clearHideTimer = () => {
