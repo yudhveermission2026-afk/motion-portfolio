@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+type MorePreviewVideoProps = {
+  src: string;
+  label: string;
+};
+
 export default function MorePreviewVideo({
   src,
   label,
-}: {
-  src: string;
-  label: string;
-}) {
+}: MorePreviewVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hideTimerRef = useRef<number | null>(null);
 
@@ -29,13 +31,14 @@ export default function MorePreviewVideo({
   const startHideTimer = () => {
     clearHideTimer();
     hideTimerRef.current = window.setTimeout(() => {
-      if (videoRef.current && !videoRef.current.paused) {
+      const video = videoRef.current;
+      if (video && !video.paused) {
         setShowControl(false);
       }
     }, 900);
   };
 
-  const pauseOtherVideos = () => {
+  const pauseOtherPortfolioVideos = () => {
     const videos = document.querySelectorAll(
       "video[data-portfolio-preview='true']"
     );
@@ -52,25 +55,31 @@ export default function MorePreviewVideo({
     const video = videoRef.current;
     if (!video) return;
 
+    setShowControl(true);
+
     if (video.paused) {
-      pauseOtherVideos();
+      pauseOtherPortfolioVideos();
 
       try {
-        video.muted = false;
-        await video.play();
-      } catch {
         video.muted = true;
         await video.play();
+        video.muted = false;
+      } catch {
+        try {
+          video.muted = true;
+          await video.play();
+        } catch {
+          return;
+        }
       }
 
       setIsPlaying(true);
-      setShowControl(true);
       startHideTimer();
     } else {
       video.pause();
       setIsPlaying(false);
-      setShowControl(true);
       clearHideTimer();
+      setShowControl(true);
     }
   };
 
@@ -94,6 +103,7 @@ export default function MorePreviewVideo({
       setIsPlaying(false);
       setShowControl(true);
       clearHideTimer();
+      video.currentTime = 0;
     };
 
     video.addEventListener("play", onPlay);
@@ -111,16 +121,13 @@ export default function MorePreviewVideo({
   return (
     <div className="group">
       <div className="relative overflow-hidden rounded-[20px] border border-black/8 bg-white/70 p-2 shadow-[0_8px_18px_rgba(0,0,0,0.05)]">
-        <div
-          onClick={() => void handleToggle()}
-          className="relative overflow-hidden rounded-[16px] bg-black cursor-pointer"
-        >
+        <div className="relative overflow-hidden rounded-[16px] bg-black">
           <video
             ref={videoRef}
             src={src}
+            poster={previewSrc}
             playsInline
             preload="metadata"
-            muted
             controls={false}
             data-portfolio-preview="true"
             className="aspect-[9/16] w-full rounded-[16px] object-cover"
@@ -130,17 +137,16 @@ export default function MorePreviewVideo({
             }}
           />
 
-          {!isPlaying && (
-            <img
-              src={previewSrc}
-              alt={label}
-              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-            />
-          )}
+          <button
+            type="button"
+            onClick={() => void handleToggle()}
+            className="absolute inset-0 z-20 block w-full cursor-pointer"
+            aria-label={isPlaying ? "Pause video" : "Play video"}
+          />
 
-          <div className="pointer-events-none absolute inset-0 bg-black/10" />
+          <div className="pointer-events-none absolute inset-0 z-10 bg-black/10" />
 
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
             <div
               className={`flex h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white backdrop-blur-md transition-all duration-300 ${
                 showControl ? "opacity-100 scale-100" : "opacity-0 scale-90"
