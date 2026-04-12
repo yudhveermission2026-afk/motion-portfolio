@@ -61,16 +61,9 @@ export default function MorePreviewVideo({
       pauseOtherPortfolioVideos();
 
       try {
-        video.muted = true;
         await video.play();
-        video.muted = false;
       } catch {
-        try {
-          video.muted = true;
-          await video.play();
-        } catch {
-          return;
-        }
+        return;
       }
 
       setIsPlaying(true);
@@ -121,7 +114,10 @@ export default function MorePreviewVideo({
   return (
     <div className="group">
       <div className="relative overflow-hidden rounded-[20px] border border-black/8 bg-white/70 p-2 shadow-[0_8px_18px_rgba(0,0,0,0.05)]">
-        <div className="relative overflow-hidden rounded-[16px] bg-black">
+        <div
+          onClick={() => void handleToggle()}
+          className="relative overflow-hidden rounded-[16px] bg-black cursor-pointer"
+        >
           <video
             ref={videoRef}
             src={src}
@@ -137,16 +133,9 @@ export default function MorePreviewVideo({
             }}
           />
 
-          <button
-            type="button"
-            onClick={() => void handleToggle()}
-            className="absolute inset-0 z-20 block w-full cursor-pointer"
-            aria-label={isPlaying ? "Pause video" : "Play video"}
-          />
-
           <div className="pointer-events-none absolute inset-0 z-10 bg-black/10" />
 
-          <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
             <div
               className={`flex h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white backdrop-blur-md transition-all duration-300 ${
                 showControl ? "opacity-100 scale-100" : "opacity-0 scale-90"
@@ -163,10 +152,10 @@ export default function MorePreviewVideo({
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="px-1 pt-2 text-center text-xs font-medium text-black/60">
-        {label}
+        <div className="px-1 pt-2 text-center text-xs font-medium text-black/60">
+          {label}
+        </div>
       </div>
     </div>
   );

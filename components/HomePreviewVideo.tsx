@@ -80,16 +80,9 @@ export default function HomePreviewVideo({
       pauseOtherPortfolioVideos();
 
       try {
-        video.muted = true;
         await video.play();
-        video.muted = false;
       } catch {
-        try {
-          video.muted = true;
-          await video.play();
-        } catch {
-          return;
-        }
+        return;
       }
 
       setIsPlaying(true);
@@ -144,7 +137,10 @@ export default function HomePreviewVideo({
       />
 
       <div className="relative overflow-hidden rounded-[26px] border border-black/8 bg-white/68 p-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
-        <div className="relative overflow-hidden rounded-[20px] bg-black">
+        <div
+          onClick={() => void handleToggle()}
+          className="relative overflow-hidden rounded-[20px] bg-black cursor-pointer"
+        >
           <video
             ref={videoRef}
             src={src}
@@ -160,16 +156,9 @@ export default function HomePreviewVideo({
             }}
           />
 
-          <button
-            type="button"
-            onClick={() => void handleToggle()}
-            className="absolute inset-0 z-20 block w-full cursor-pointer"
-            aria-label={isPlaying ? "Pause preview video" : "Play preview video"}
-          />
-
           <div className="pointer-events-none absolute inset-0 z-10 bg-black/10" />
 
-          <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
             <div
               className={`flex h-12 w-12 items-center justify-center rounded-full border border-white/35 bg-black/35 text-white backdrop-blur-md transition-all duration-300 ${
                 showControl ? "opacity-100 scale-100" : "opacity-0 scale-90"
