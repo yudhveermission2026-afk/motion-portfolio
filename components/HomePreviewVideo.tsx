@@ -16,10 +16,12 @@ export default function HomePreviewVideo({
   glowTheme = "blue",
 }: HomePreviewVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [started, setStarted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showButton, setShowButton] = useState(true);
+  const [showControl, setShowControl] = useState(true);
+  const hideTimerRef = useRef<number | null>(null);
 
-  const thumbSrc = useMemo(() => {
+  const previewSrc = useMemo(() => {
     return src.replace(/\.(mp4|webm|mov|m4v)$/i, ".png");
   }, [src]);
 
@@ -30,45 +32,73 @@ export default function HomePreviewVideo({
     orange: "from-amber-300/30 via-orange-300/20 to-yellow-300/25",
   };
 
+  const clearHideTimer = () => {
+    if (hideTimerRef.current) {
+      window.clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  };
+
+  const startHideTimer = () => {
+    clearHideTimer();
+    hideTimerRef.current = window.setTimeout(() => {
+      if (videoRef.current && !videoRef.current.paused) {
+        setShowControl(false);
+      }
+    }, 900);
+  };
+
+  const pauseOtherVideos = () => {
+    const videos = document.querySelectorAll(
+      "video[data-portfolio-preview='true']"
+    );
+
+    videos.forEach((node) => {
+      const other = node as HTMLVideoElement;
+      if (other !== videoRef.current) {
+        other.pause();
+      }
+    });
+  };
+
+  const playVideo = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    pauseOtherVideos();
+
+    try {
+      video.muted = false;
+      await video.play();
+    } catch {
+      video.muted = true;
+      await video.play();
+    }
+
+    setIsPlaying(true);
+    setShowControl(true);
+    startHideTimer();
+  };
+
   const handleToggle = async () => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (video.paused) {
-      const allHomeVideos = document.querySelectorAll(
-        "video[data-home-preview-video='true']"
-      );
-
-      allHomeVideos.forEach((node) => {
-        const other = node as HTMLVideoElement;
-        if (other !== video) {
-          other.pause();
-        }
+    if (!started) {
+      setStarted(true);
+      requestAnimationFrame(() => {
+        void playVideo();
       });
+      return;
+    }
 
-      const showreel = document.querySelector(
-        "video[data-showreel-video='true']"
-      ) as HTMLVideoElement | null;
-
-      if (showreel) {
-        showreel.muted = true;
-      }
-
-      try {
-        video.muted = false;
-        await video.play();
-      } catch {
-        video.muted = true;
-        await video.play();
-      }
-
-      setIsPlaying(true);
-      setShowButton(true);
-      setTimeout(() => setShowButton(false), 300);
+    if (video.paused) {
+      await playVideo();
     } else {
       video.pause();
       setIsPlaying(false);
-      setShowButton(true);
+      setShowControl(true);
+      clearHideTimer();
     }
   };
 
@@ -76,31 +106,36 @@ export default function HomePreviewVideo({
     const video = videoRef.current;
     if (!video) return;
 
-    const onPause = () => {
-      setIsPlaying(false);
-      setShowButton(true);
-    };
-
     const onPlay = () => {
       setIsPlaying(true);
-      setTimeout(() => setShowButton(false), 300);
+      setShowControl(true);
+      startHideTimer();
+    };
+
+    const onPause = () => {
+      setIsPlaying(false);
+      setShowControl(true);
+      clearHideTimer();
     };
 
     const onEnded = () => {
       setIsPlaying(false);
-      setShowButton(true);
+      setShowControl(true);
+      clearHideTimer();
+      setStarted(false);
     };
 
-    video.addEventListener("pause", onPause);
     video.addEventListener("play", onPlay);
+    video.addEventListener("pause", onPause);
     video.addEventListener("ended", onEnded);
 
     return () => {
-      video.removeEventListener("pause", onPause);
       video.removeEventListener("play", onPlay);
+      video.removeEventListener("pause", onPause);
       video.removeEventListener("ended", onEnded);
+      clearHideTimer();
     };
-  }, []);
+  }, [started]);
 
   return (
     <div className="group relative">
@@ -109,36 +144,42 @@ export default function HomePreviewVideo({
       />
 
       <div className="relative overflow-hidden rounded-[26px] border border-black/8 bg-white/68 p-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
-        <div className="relative overflow-hidden rounded-[20px] bg-black">
+        <button
+          type="button"
+          onClick={() => void handleToggle()}
+          className="relative block w-full overflow-hidden rounded-[20px] bg-black text-left"
+          aria-label={isPlaying ? "Pause preview video" : "Play preview video"}
+        >
           <video
             ref={videoRef}
             src={src}
-            className={`aspect-[9/16] w-full object-cover transition duration-300 ${
-              isPlaying ? "scale-[1.008]" : "scale-100"
-            }`}
-            preload="none"
+            poster={previewSrc}
             playsInline
+            preload="metadata"
             muted
-            data-home-preview-video="true"
+            controls={false}
+            data-portfolio-preview="true"
+            className="aspect-[9/16] w-full rounded-[20px] object-cover"
+            onMouseMove={() => {
+              setShowControl(true);
+              startHideTimer();
+            }}
           />
 
-          {!isPlaying && (
+          {!started && (
             <img
-              src={thumbSrc}
+              src={previewSrc}
               alt={label}
               className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-              loading="lazy"
             />
           )}
 
-          <button
-            onClick={handleToggle}
-            className="absolute inset-0 flex items-center justify-center"
-            aria-label={isPlaying ? "Pause preview video" : "Play preview video"}
-          >
+          <div className="pointer-events-none absolute inset-0 bg-black/10" />
+
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div
               className={`flex h-12 w-12 items-center justify-center rounded-full border border-white/35 bg-black/35 text-white backdrop-blur-md transition-all duration-300 ${
-                showButton ? "opacity-100 scale-100" : "opacity-0 scale-90"
+                showControl ? "opacity-100 scale-100" : "opacity-0 scale-90"
               }`}
             >
               {isPlaying ? (
@@ -150,8 +191,8 @@ export default function HomePreviewVideo({
                 <div className="ml-[2px] h-0 w-0 border-y-[8px] border-l-[14px] border-y-transparent border-l-white" />
               )}
             </div>
-          </button>
-        </div>
+          </div>
+        </button>
 
         <div className="px-1 pt-2 text-center text-xs font-medium tracking-[0.25em] text-black/55 uppercase">
           {label}

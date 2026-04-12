@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function MorePreviewVideo({
   src,
@@ -10,44 +10,82 @@ export default function MorePreviewVideo({
   label: string;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [started, setStarted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showButton, setShowButton] = useState(true);
+  const [showControl, setShowControl] = useState(true);
+  const hideTimerRef = useRef<number | null>(null);
 
-  const posterSrc = useMemo(() => {
+  const previewSrc = useMemo(() => {
     return src.replace(/\.(mp4|webm|mov|m4v)$/i, ".png");
   }, [src]);
+
+  const clearHideTimer = () => {
+    if (hideTimerRef.current) {
+      window.clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  };
+
+  const startHideTimer = () => {
+    clearHideTimer();
+    hideTimerRef.current = window.setTimeout(() => {
+      if (videoRef.current && !videoRef.current.paused) {
+        setShowControl(false);
+      }
+    }, 900);
+  };
+
+  const pauseOtherVideos = () => {
+    const videos = document.querySelectorAll(
+      "video[data-portfolio-preview='true']"
+    );
+
+    videos.forEach((node) => {
+      const other = node as HTMLVideoElement;
+      if (other !== videoRef.current) {
+        other.pause();
+      }
+    });
+  };
+
+  const playVideo = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    pauseOtherVideos();
+
+    try {
+      video.muted = false;
+      await video.play();
+    } catch {
+      video.muted = true;
+      await video.play();
+    }
+
+    setIsPlaying(true);
+    setShowControl(true);
+    startHideTimer();
+  };
 
   const handleToggle = async () => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (video.paused) {
-      const allVideos = document.querySelectorAll(
-        "video[data-more-preview-video='true']"
-      );
-
-      allVideos.forEach((node) => {
-        const other = node as HTMLVideoElement;
-        if (other !== video) {
-          other.pause();
-        }
+    if (!started) {
+      setStarted(true);
+      requestAnimationFrame(() => {
+        void playVideo();
       });
+      return;
+    }
 
-      try {
-        video.muted = false;
-        await video.play();
-      } catch {
-        video.muted = true;
-        await video.play();
-      }
-
-      setIsPlaying(true);
-      setShowButton(true);
-      setTimeout(() => setShowButton(false), 300);
+    if (video.paused) {
+      await playVideo();
     } else {
       video.pause();
       setIsPlaying(false);
-      setShowButton(true);
+      setShowControl(true);
+      clearHideTimer();
     }
   };
 
@@ -55,55 +93,76 @@ export default function MorePreviewVideo({
     const video = videoRef.current;
     if (!video) return;
 
-    const onPause = () => {
-      setIsPlaying(false);
-      setShowButton(true);
-    };
-
     const onPlay = () => {
       setIsPlaying(true);
-      setTimeout(() => setShowButton(false), 300);
+      setShowControl(true);
+      startHideTimer();
+    };
+
+    const onPause = () => {
+      setIsPlaying(false);
+      setShowControl(true);
+      clearHideTimer();
     };
 
     const onEnded = () => {
       setIsPlaying(false);
-      setShowButton(true);
+      setShowControl(true);
+      clearHideTimer();
+      setStarted(false);
     };
 
-    video.addEventListener("pause", onPause);
     video.addEventListener("play", onPlay);
+    video.addEventListener("pause", onPause);
     video.addEventListener("ended", onEnded);
 
     return () => {
-      video.removeEventListener("pause", onPause);
       video.removeEventListener("play", onPlay);
+      video.removeEventListener("pause", onPause);
       video.removeEventListener("ended", onEnded);
+      clearHideTimer();
     };
-  }, []);
+  }, [started]);
 
   return (
     <div className="group">
       <div className="relative overflow-hidden rounded-[20px] border border-black/8 bg-white/70 p-2 shadow-[0_8px_18px_rgba(0,0,0,0.05)]">
-        <div className="relative overflow-hidden rounded-[16px] bg-black">
+        <button
+          type="button"
+          onClick={() => void handleToggle()}
+          className="relative block w-full overflow-hidden rounded-[16px] bg-black text-left"
+          aria-label={isPlaying ? "Pause video" : "Play video"}
+        >
           <video
             ref={videoRef}
             src={src}
-            poster={posterSrc}
-            className="aspect-[9/16] w-full object-cover"
-            preload="metadata"
+            poster={previewSrc}
             playsInline
+            preload="metadata"
             muted
-            data-more-preview-video="true"
+            controls={false}
+            data-portfolio-preview="true"
+            className="aspect-[9/16] w-full rounded-[16px] object-cover"
+            onMouseMove={() => {
+              setShowControl(true);
+              startHideTimer();
+            }}
           />
 
-          <button
-            onClick={handleToggle}
-            className="absolute inset-0 flex items-center justify-center"
-            aria-label={isPlaying ? "Pause video" : "Play video"}
-          >
+          {!started && (
+            <img
+              src={previewSrc}
+              alt={label}
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+
+          <div className="pointer-events-none absolute inset-0 bg-black/10" />
+
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-black/45 backdrop-blur-md transition-all duration-300 ${
-                showButton ? "opacity-100 scale-100" : "opacity-0 scale-90"
+              className={`flex h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white backdrop-blur-md transition-all duration-300 ${
+                showControl ? "opacity-100 scale-100" : "opacity-0 scale-90"
               }`}
             >
               {isPlaying ? (
@@ -115,8 +174,8 @@ export default function MorePreviewVideo({
                 <div className="ml-[2px] h-0 w-0 border-y-[7px] border-l-[12px] border-y-transparent border-l-white" />
               )}
             </div>
-          </button>
-        </div>
+          </div>
+        </button>
       </div>
 
       <div className="px-1 pt-2 text-center text-xs font-medium text-black/60">
