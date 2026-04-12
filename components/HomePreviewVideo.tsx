@@ -16,10 +16,10 @@ export default function HomePreviewVideo({
   glowTheme = "blue",
 }: HomePreviewVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [started, setStarted] = useState(false);
+  const hideTimerRef = useRef<number | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [showControl, setShowControl] = useState(true);
-  const hideTimerRef = useRef<number | null>(null);
 
   const previewSrc = useMemo(() => {
     return src.replace(/\.(mp4|webm|mov|m4v)$/i, ".png");
@@ -59,41 +59,34 @@ export default function HomePreviewVideo({
         other.pause();
       }
     });
-  };
 
-  const playVideo = async () => {
-    const video = videoRef.current;
-    if (!video) return;
+    const showreel = document.querySelector(
+      "video[data-showreel-video='true']"
+    ) as HTMLVideoElement | null;
 
-    pauseOtherVideos();
-
-    try {
-      video.muted = false;
-      await video.play();
-    } catch {
-      video.muted = true;
-      await video.play();
+    if (showreel) {
+      showreel.muted = true;
     }
-
-    setIsPlaying(true);
-    setShowControl(true);
-    startHideTimer();
   };
 
   const handleToggle = async () => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (!started) {
-      setStarted(true);
-      requestAnimationFrame(() => {
-        void playVideo();
-      });
-      return;
-    }
-
     if (video.paused) {
-      await playVideo();
+      pauseOtherVideos();
+
+      try {
+        video.muted = false;
+        await video.play();
+      } catch {
+        video.muted = true;
+        await video.play();
+      }
+
+      setIsPlaying(true);
+      setShowControl(true);
+      startHideTimer();
     } else {
       video.pause();
       setIsPlaying(false);
@@ -122,7 +115,6 @@ export default function HomePreviewVideo({
       setIsPlaying(false);
       setShowControl(true);
       clearHideTimer();
-      setStarted(false);
     };
 
     video.addEventListener("play", onPlay);
@@ -135,7 +127,7 @@ export default function HomePreviewVideo({
       video.removeEventListener("ended", onEnded);
       clearHideTimer();
     };
-  }, [started]);
+  }, []);
 
   return (
     <div className="group relative">
@@ -144,16 +136,13 @@ export default function HomePreviewVideo({
       />
 
       <div className="relative overflow-hidden rounded-[26px] border border-black/8 bg-white/68 p-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
-        <button
-          type="button"
+        <div
           onClick={() => void handleToggle()}
-          className="relative block w-full overflow-hidden rounded-[20px] bg-black text-left"
-          aria-label={isPlaying ? "Pause preview video" : "Play preview video"}
+          className="relative overflow-hidden rounded-[20px] bg-black cursor-pointer"
         >
           <video
             ref={videoRef}
             src={src}
-            poster={previewSrc}
             playsInline
             preload="metadata"
             muted
@@ -166,7 +155,7 @@ export default function HomePreviewVideo({
             }}
           />
 
-          {!started && (
+          {!isPlaying && (
             <img
               src={previewSrc}
               alt={label}
@@ -192,7 +181,7 @@ export default function HomePreviewVideo({
               )}
             </div>
           </div>
-        </button>
+        </div>
 
         <div className="px-1 pt-2 text-center text-xs font-medium tracking-[0.25em] text-black/55 uppercase">
           {label}

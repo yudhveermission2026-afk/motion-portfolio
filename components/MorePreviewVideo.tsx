@@ -10,10 +10,10 @@ export default function MorePreviewVideo({
   label: string;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [started, setStarted] = useState(false);
+  const hideTimerRef = useRef<number | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [showControl, setShowControl] = useState(true);
-  const hideTimerRef = useRef<number | null>(null);
 
   const previewSrc = useMemo(() => {
     return src.replace(/\.(mp4|webm|mov|m4v)$/i, ".png");
@@ -48,39 +48,24 @@ export default function MorePreviewVideo({
     });
   };
 
-  const playVideo = async () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    pauseOtherVideos();
-
-    try {
-      video.muted = false;
-      await video.play();
-    } catch {
-      video.muted = true;
-      await video.play();
-    }
-
-    setIsPlaying(true);
-    setShowControl(true);
-    startHideTimer();
-  };
-
   const handleToggle = async () => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (!started) {
-      setStarted(true);
-      requestAnimationFrame(() => {
-        void playVideo();
-      });
-      return;
-    }
-
     if (video.paused) {
-      await playVideo();
+      pauseOtherVideos();
+
+      try {
+        video.muted = false;
+        await video.play();
+      } catch {
+        video.muted = true;
+        await video.play();
+      }
+
+      setIsPlaying(true);
+      setShowControl(true);
+      startHideTimer();
     } else {
       video.pause();
       setIsPlaying(false);
@@ -109,7 +94,6 @@ export default function MorePreviewVideo({
       setIsPlaying(false);
       setShowControl(true);
       clearHideTimer();
-      setStarted(false);
     };
 
     video.addEventListener("play", onPlay);
@@ -122,21 +106,18 @@ export default function MorePreviewVideo({
       video.removeEventListener("ended", onEnded);
       clearHideTimer();
     };
-  }, [started]);
+  }, []);
 
   return (
     <div className="group">
       <div className="relative overflow-hidden rounded-[20px] border border-black/8 bg-white/70 p-2 shadow-[0_8px_18px_rgba(0,0,0,0.05)]">
-        <button
-          type="button"
+        <div
           onClick={() => void handleToggle()}
-          className="relative block w-full overflow-hidden rounded-[16px] bg-black text-left"
-          aria-label={isPlaying ? "Pause video" : "Play video"}
+          className="relative overflow-hidden rounded-[16px] bg-black cursor-pointer"
         >
           <video
             ref={videoRef}
             src={src}
-            poster={previewSrc}
             playsInline
             preload="metadata"
             muted
@@ -149,7 +130,7 @@ export default function MorePreviewVideo({
             }}
           />
 
-          {!started && (
+          {!isPlaying && (
             <img
               src={previewSrc}
               alt={label}
@@ -175,7 +156,7 @@ export default function MorePreviewVideo({
               )}
             </div>
           </div>
-        </button>
+        </div>
       </div>
 
       <div className="px-1 pt-2 text-center text-xs font-medium text-black/60">
