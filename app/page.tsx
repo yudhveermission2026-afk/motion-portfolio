@@ -14,10 +14,10 @@ const projectSections = [
       "from-blue-300/90 via-cyan-300/85 to-sky-200/80 border-cyan-300/70",
     glowClass: "bg-cyan-300/40",
     videos: [
-      "/projects/trending/preview1.mp4",
-      "/projects/trending/preview2.mp4",
-      "/projects/trending/preview3.mp4",
-      "/projects/trending/preview4.mp4",
+      "/projects/trending/Preview1.mp4",
+      "/projects/trending/Preview2.mp4",
+      "/projects/trending/Preview3.mp4",
+      "/projects/trending/Preview4.mp4",
     ],
   },
   {
@@ -28,10 +28,10 @@ const projectSections = [
       "from-fuchsia-300/90 via-pink-300/85 to-rose-200/80 border-pink-300/70",
     glowClass: "bg-pink-300/40",
     videos: [
-      "/projects/political/preview1.mp4",
-      "/projects/political/preview2.mp4",
-      "/projects/political/preview3.mp4",
-      "/projects/political/preview4.mp4",
+      "/projects/political/Preview1.mp4",
+      "/projects/political/Preview2.mp4",
+      "/projects/political/Preview3.mp4",
+      "/projects/political/Preview4.mp4",
     ],
   },
   {
@@ -42,10 +42,10 @@ const projectSections = [
       "from-amber-300/90 via-yellow-300/85 to-orange-200/80 border-amber-300/70",
     glowClass: "bg-amber-300/40",
     videos: [
-      "/projects/ai/preview1.mp4",
-      "/projects/ai/preview2.mp4",
-      "/projects/ai/preview3.mp4",
-      "/projects/ai/preview4.mp4",
+      "/projects/ai/Preview1.mp4",
+      "/projects/ai/Preview2.mp4",
+      "/projects/ai/Preview3.mp4",
+      "/projects/ai/Preview4.mp4",
     ],
   },
   {
@@ -56,10 +56,10 @@ const projectSections = [
       "from-emerald-300/90 via-green-300/85 to-teal-200/80 border-emerald-300/70",
     glowClass: "bg-emerald-300/40",
     videos: [
-      "/projects/memes/preview1.mp4",
-      "/projects/memes/preview2.mp4",
-      "/projects/memes/preview3.mp4",
-      "/projects/memes/preview4.mp4",
+      "/projects/memes/Preview1.mp4",
+      "/projects/memes/Preview2.mp4",
+      "/projects/memes/Preview3.mp4",
+      "/projects/memes/Preview4.mp4",
     ],
   },
 ];
