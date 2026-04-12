@@ -1,31 +1,31 @@
 {
   "trending": [
-    "/projects/trending/preview1.mp4",
-    "/projects/trending/preview2.mp4",
-    "/projects/trending/preview3.mp4",
-    "/projects/trending/preview4.mp4",
-    "/projects/trending/preview5.mp4"
+    "/projects/trending/Preview1.mp4",
+    "/projects/trending/Preview2.mp4",
+    "/projects/trending/Preview3.mp4",
+    "/projects/trending/Preview4.mp4",
+    "/projects/trending/Preview5.mp4"
   ],
   "political": [
-    "/projects/political/preview1.mp4",
-    "/projects/political/preview2.mp4",
-    "/projects/political/preview3.mp4",
-    "/projects/political/preview4.mp4",
-    "/projects/political/preview5.mp4"
+    "/projects/political/Preview1.mp4",
+    "/projects/political/Preview2.mp4",
+    "/projects/political/Preview3.mp4",
+    "/projects/political/Preview4.mp4",
+    "/projects/political/Preview5.mp4"
   ],
   "memes": [
-    "/projects/memes/preview1.mp4",
-    "/projects/memes/preview2.mp4",
-    "/projects/memes/preview3.mp4",
-    "/projects/memes/preview4.mp4",
-    "/projects/memes/preview5.mp4"
+    "/projects/memes/Preview1.mp4",
+    "/projects/memes/Preview2.mp4",
+    "/projects/memes/Preview3.mp4",
+    "/projects/memes/Preview4.mp4",
+    "/projects/memes/Preview5.mp4"
   ],
   "ai": [
-    "/projects/ai/preview1.mp4",
-    "/projects/ai/preview2.mp4",
-    "/projects/ai/preview3.mp4",
-    "/projects/ai/preview4.mp4",
-    "/projects/ai/preview5.mp4",
-    "/projects/ai/preview6.mp4"
+    "/projects/ai/Preview1.mp4",
+    "/projects/ai/Preview2.mp4",
+    "/projects/ai/Preview3.mp4",
+    "/projects/ai/Preview4.mp4",
+    "/projects/ai/Preview5.mp4",
+    "/projects/ai/Preview6.mp4"
   ]
 }
