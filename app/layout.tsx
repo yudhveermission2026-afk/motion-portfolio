@@ -1,5 +1,6 @@
 import "./globals.css";
 import SmoothScroll from "../components/SmoothScroll";
+import InteractiveShell from "../components/InteractiveShell";
 
 export const metadata = {
   title: "Motion Portfolio",
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <SmoothScroll>{children}</SmoothScroll>
+        <SmoothScroll>
+          <InteractiveShell>{children}</InteractiveShell>
+        </SmoothScroll>
       </body>
     </html>
   );

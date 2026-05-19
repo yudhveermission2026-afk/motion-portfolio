@@ -1,70 +1,101 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
-import { useEffect } from "react";
-import HomePreviewVideo from "../components/HomePreviewVideo";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import ProjectsShowcase from "../components/ProjectsShowcase";
+import HeroScene from "../components/HeroScene";
+import AboutScene from "../components/AboutScene";
+import { fetchHomeSections } from "@/lib/site/videos";
+import type { SectionType, VideoItem } from "@/types/hacker";
 
-const projectSections = [
+const sectionThemeMap: Record<
+  SectionType,
   {
-    key: "trending",
+    title: string;
+    pillClass: string;
+    glowClass: string;
+  }
+> = {
+  trending: {
     title: "Trending Reels",
-    moreHref: "/trending",
     pillClass:
       "from-blue-300/90 via-cyan-300/85 to-sky-200/80 border-cyan-300/70",
     glowClass: "bg-cyan-300/40",
-    videos: [
-      "/projects/trending/preview1.mp4",
-      "/projects/trending/preview2.mp4",
-      "/projects/trending/preview3.mp4",
-      "/projects/trending/preview4.mp4",
-    ],
   },
-  {
-    key: "political",
+  political: {
     title: "Political Edits",
-    moreHref: "/political",
     pillClass:
       "from-fuchsia-300/90 via-pink-300/85 to-rose-200/80 border-pink-300/70",
     glowClass: "bg-pink-300/40",
-    videos: [
-      "/projects/political/preview1.mp4",
-      "/projects/political/preview2.mp4",
-      "/projects/political/preview3.mp4",
-      "/projects/political/preview4.mp4",
-    ],
   },
-  {
-    key: "ai",
+  ai: {
     title: "AI Videos",
-    moreHref: "/ai",
     pillClass:
       "from-amber-300/90 via-yellow-300/85 to-orange-200/80 border-amber-300/70",
     glowClass: "bg-amber-300/40",
-    videos: [
-      "/projects/ai/preview1.mp4",
-      "/projects/ai/preview2.mp4",
-      "/projects/ai/preview3.mp4",
-      "/projects/ai/preview4.mp4",
-    ],
   },
-  {
-    key: "memes",
+  memes: {
     title: "Memes",
-    moreHref: "/memes",
     pillClass:
       "from-emerald-300/90 via-green-300/85 to-teal-200/80 border-emerald-300/70",
     glowClass: "bg-emerald-300/40",
-    videos: [
-      "/projects/memes/preview1.mp4",
-      "/projects/memes/preview2.mp4",
-      "/projects/memes/preview3.mp4",
-      "/projects/memes/preview4.mp4",
-    ],
   },
-];
+};
 
-const glowThemes = ["pink", "blue", "green", "orange"] as const;
+function TopNav() {
+  const [visible, setVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    lastScrollY.current = window.scrollY;
+
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      const diff = currentY - lastScrollY.current;
+
+      if (currentY < 80) {
+        setVisible(true);
+      } else if (diff > 8) {
+        setVisible(false);
+      } else if (diff < -8) {
+        setVisible(true);
+      }
+
+      lastScrollY.current = currentY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <div
+      className={`fixed left-1/2 top-5 z-50 w-[min(94vw,900px)] -translate-x-1/2 transition-all duration-500 ${
+        visible ? "translate-y-0 opacity-100" : "-translate-y-28 opacity-0"
+      }`}
+    >
+      <div className="glass-nav rounded-full px-4 py-3">
+        <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4">
+          {[
+            ["Home", "#home"],
+            ["About", "#about"],
+            ["Skills", "#skills"],
+            ["Contact Me", "#contact"],
+          ].map(([label, href]) => (
+            <a
+              key={href}
+              href={href}
+              className="nav-link rounded-full px-5 py-2.5 text-base font-semibold text-black/72 transition md:text-[19px]"
+              data-cursor="pointer"
+            >
+              <span>{label}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function PageBackdrop() {
   return (
@@ -85,7 +116,7 @@ function GlassPanel({
   children,
   className = "",
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
@@ -105,12 +136,12 @@ function PastelPill({
   className = "",
   glowClass = "",
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   glowClass?: string;
 }) {
   return (
-    <div className="group relative inline-flex">
+    <div className="group relative inline-flex tilt-hover" data-cursor="pointer">
       <div
         className={`pointer-events-none absolute -inset-3 rounded-full opacity-50 blur-2xl transition duration-300 group-hover:opacity-100 ${glowClass}`}
       />
@@ -139,7 +170,8 @@ function ExactLogoCard({
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="group flex flex-col items-center gap-3"
+      className="group flex h-full flex-col items-center gap-3 tilt-hover"
+      data-cursor="pointer"
     >
       <div className="relative">
         <div
@@ -147,33 +179,32 @@ function ExactLogoCard({
         />
         <div className="relative flex h-20 w-20 items-center justify-center rounded-[24px] border border-black/8 bg-white shadow-[0_12px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.9)]">
           <div className="absolute inset-[2px] rounded-[22px] bg-white" />
-          <img
-            src={src}
-            alt={label}
-            className="relative z-10 h-11 w-11 object-contain"
-          />
+          <img src={src} alt={label} className="relative z-10 h-11 w-11 object-contain" />
         </div>
       </div>
-      <p className="text-xs text-black/65">{label}</p>
+      <p className="text-center text-xs text-black/65">{label}</p>
     </a>
   );
 }
 
 function FocusCard({
-  href,
   title,
   bgClass,
   glowClass,
   onClick,
 }: {
-  href: string;
   title: string;
   bgClass: string;
   glowClass: string;
   onClick: () => void;
 }) {
   return (
-    <Link href={href} onClick={onClick} className="group relative block">
+    <button
+      onClick={onClick}
+      type="button"
+      className="group relative block w-full text-left tilt-hover"
+      data-cursor="pointer"
+    >
       <div
         className={`pointer-events-none absolute -inset-3 rounded-[30px] opacity-70 blur-2xl transition duration-300 group-hover:opacity-100 ${glowClass}`}
       />
@@ -185,7 +216,7 @@ function FocusCard({
           {title}
         </span>
       </div>
-    </Link>
+    </button>
   );
 }
 
@@ -203,7 +234,7 @@ function ContactCard({
   iconClassName?: string;
 }) {
   return (
-    <GlassPanel className="min-h-[255px] p-8">
+    <GlassPanel className="h-full min-h-[255px] p-8 tilt-hover">
       <div className="flex h-full flex-col items-center justify-center text-center">
         <h3 className="mb-8 text-2xl font-semibold text-black/88">{title}</h3>
 
@@ -212,6 +243,7 @@ function ContactCard({
           target={href.startsWith("mailto:") ? undefined : "_blank"}
           rel={href.startsWith("mailto:") ? undefined : "noreferrer"}
           className="group relative inline-flex"
+          data-cursor="pointer"
         >
           <div
             className={`absolute -inset-5 rounded-[28px] opacity-0 blur-2xl transition duration-300 group-hover:opacity-100 ${glowClass}`}
@@ -230,28 +262,104 @@ function ContactCard({
 }
 
 export default function Home() {
+  const [sectionsData, setSectionsData] = useState<Record<SectionType, VideoItem[]> | null>(null);
+  const [showreelHovered, setShowreelHovered] = useState(false);
+  const showreelRef = useRef<HTMLVideoElement | null>(null);
+
   useEffect(() => {
-    const savedScroll = sessionStorage.getItem("home-scroll-position");
-    if (savedScroll) {
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: Number(savedScroll), behavior: "auto" });
-        sessionStorage.removeItem("home-scroll-position");
+    fetchHomeSections()
+      .then(setSectionsData)
+      .catch(() => {
+        setSectionsData({
+          trending: [],
+          political: [],
+          ai: [],
+          memes: [],
+        });
       });
-    }
   }, []);
 
-  const saveScrollBeforeLeave = () => {
-    sessionStorage.setItem("home-scroll-position", String(window.scrollY));
+  useEffect(() => {
+    const nodes = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const el = entry.target as HTMLElement;
+          if (entry.isIntersecting) {
+            el.classList.add("reveal-visible");
+          } else {
+            el.classList.remove("reveal-visible");
+          }
+        });
+      },
+      { threshold: 0.14, rootMargin: "0px 0px -10% 0px" }
+    );
+
+    nodes.forEach((node) => {
+      node.classList.add("reveal");
+      observer.observe(node);
+    });
+
+    return () => observer.disconnect();
+  }, [sectionsData]);
+
+  const projectSections = useMemo(() => {
+    if (!sectionsData) return [];
+
+    return (Object.keys(sectionThemeMap) as SectionType[]).map((key) => ({
+      key,
+      ...sectionThemeMap[key],
+      videos: sectionsData[key] || [],
+    }));
+  }, [sectionsData]);
+
+  const jumpToProjectSection = (section: SectionType) => {
+    window.dispatchEvent(
+      new CustomEvent<SectionType>("portfolio-project-section", { detail: section })
+    );
+
+    document.getElementById("work")?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  };
+
+  const handleShowreelEnter = () => {
+    setShowreelHovered(true);
+
+    const previews = document.querySelectorAll("video[data-portfolio-preview='true']");
+
+    previews.forEach((node) => {
+      const preview = node as HTMLVideoElement;
+      preview.pause();
+      preview.currentTime = 0;
+    });
+
+    if (showreelRef.current) {
+      showreelRef.current.muted = false;
+      showreelRef.current.volume = 1;
+      showreelRef.current.play().catch(() => {});
+    }
+  };
+
+  const handleShowreelLeave = () => {
+    setShowreelHovered(false);
+
+    if (showreelRef.current) {
+      showreelRef.current.muted = true;
+    }
   };
 
   return (
     <main className="min-h-screen bg-transparent text-black">
       <PageBackdrop />
+      <TopNav />
 
-      <section className="relative px-6">
-        <div className="flex min-h-screen items-center justify-center text-center">
-          <div className="max-w-6xl">
-            <p className="mb-6 text-sm uppercase tracking-[0.35em] text-black/45">
+      <section id="home" className="section-anchor relative overflow-hidden px-6 pt-24">
+        <div className="mx-auto grid min-h-[calc(100vh-120px)] max-w-7xl items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="reveal text-center lg:text-left" data-reveal>
+            <p className="mb-5 text-sm uppercase tracking-[0.35em] text-black/45">
               Ankit • Video Editor • Short-Form & AI Video Creator
             </p>
 
@@ -260,22 +368,52 @@ export default function Home() {
               <span className="block text-black/75">that grabs attention</span>
             </h1>
 
-            <p className="mx-auto mt-8 max-w-3xl text-black/65">
+            <p className="mx-auto mt-7 max-w-3xl text-black/65 lg:mx-0">
               I create high-impact social media edits, trend-driven reels,
               political creatives, premium AI videos, and viral meme content
               built to engage modern audiences.
             </p>
+
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+              <a href="#skills" data-cursor="pointer">
+                <PastelPill
+                  className="border-sky-200/70 from-white/95 via-sky-50/90 to-pink-50/90"
+                  glowClass="bg-sky-200/30"
+                >
+                  Explore Skills
+                </PastelPill>
+              </a>
+              <a href="#contact" data-cursor="pointer">
+                <PastelPill
+                  className="border-pink-200/70 from-pink-100/95 via-white/90 to-sky-100/90"
+                  glowClass="bg-pink-200/30"
+                >
+                  Contact Me
+                </PastelPill>
+              </a>
+            </div>
+          </div>
+
+          <div className="reveal reveal-delay-1" data-reveal>
+            <HeroScene />
           </div>
         </div>
       </section>
 
       <section className="relative px-6 py-20">
         <div className="mx-auto flex max-w-6xl items-center justify-center">
-          <div className="group relative h-[62vh] w-full overflow-hidden rounded-[36px] border border-black/8 bg-white shadow-[0_28px_70px_rgba(0,0,0,0.10)]">
+          <div
+            className="group relative h-[62vh] w-full overflow-hidden rounded-[36px] border border-black/8 bg-white shadow-[0_28px_70px_rgba(0,0,0,0.10)] reveal tilt-hover"
+            data-reveal
+            data-cursor="pointer"
+            onMouseEnter={handleShowreelEnter}
+            onMouseLeave={handleShowreelLeave}
+          >
             <video
+              ref={showreelRef}
               src="/showreel.mp4"
               autoPlay
-              muted
+              muted={!showreelHovered}
               loop
               playsInline
               data-showreel-video="true"
@@ -284,7 +422,13 @@ export default function Home() {
             <div className="absolute inset-0 bg-black/10" />
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.00))]" />
 
-            <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center transition-all duration-500 group-hover:opacity-0 group-hover:scale-95">
+            <div className="pointer-events-none absolute right-5 top-5 z-20">
+              <div className="rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/90 backdrop-blur-md">
+                {showreelHovered ? "Sound On" : "Hover For Sound"}
+              </div>
+            </div>
+
+            <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center transition-all duration-500 group-hover:scale-95 group-hover:opacity-0">
               <PastelPill
                 className="mb-4 border-fuchsia-200/70 from-fuchsia-100/90 via-pink-100/85 to-rose-100/80"
                 glowClass="bg-pink-200/40"
@@ -304,85 +448,20 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="relative px-6 py-24">
+      <section id="work" className="section-anchor relative px-4 py-20 md:px-6 md:py-28">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-16 text-center">
-            <div className="mb-5 flex justify-center">
-              <PastelPill
-                className="border-violet-200/70 from-violet-100/95 via-fuchsia-50/90 to-sky-100/90"
-                glowClass="bg-violet-200/35"
-              >
-                Selected Work
-              </PastelPill>
-            </div>
-
-            <div className="flex justify-center">
-              <PastelPill
-                className="border-sky-200/70 from-white/95 via-sky-50/85 to-pink-50/85 px-8 py-4 text-4xl md:text-6xl"
-                glowClass="bg-sky-200/30"
-              >
-                Projects &amp; Edits
-              </PastelPill>
-            </div>
-          </div>
-
-          <div className="space-y-16">
-            {projectSections.map((section) => (
-              <section key={section.key}>
-                <div className="mb-8 grid grid-cols-2 items-center gap-4">
-                  <div className="justify-self-start">
-                    <PastelPill
-                      className={`${section.pillClass} px-5 py-3 text-lg md:px-7 md:py-4 md:text-3xl`}
-                      glowClass={section.glowClass}
-                    >
-                      {section.title}
-                    </PastelPill>
-                  </div>
-
-                  <div className="justify-self-end">
-                    <Link href={section.moreHref} onClick={saveScrollBeforeLeave}>
-                      <PastelPill
-                        className={`${section.pillClass} px-5 py-3 md:px-6 md:py-3`}
-                        glowClass={section.glowClass}
-                      >
-                        More
-                      </PastelPill>
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                  {section.videos.map((video, index) => (
-                    <HomePreviewVideo
-                      key={video}
-                      src={video}
-                      label={`Preview ${index + 1}`}
-                      glowTheme={glowThemes[index % 4]}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
+          <ProjectsShowcase sections={projectSections} />
         </div>
       </section>
 
-      <section className="relative px-6 py-28">
+      <section id="about" className="section-anchor relative px-6 py-28">
         <div className="mx-auto max-w-6xl">
-          <div className="grid items-start gap-12 md:grid-cols-[260px,1fr]">
-            <div className="flex justify-center md:justify-start">
-              <div className="relative h-56 w-56 overflow-hidden rounded-full border border-black/10 shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
-                <Image
-                  src="/profile.jpg"
-                  alt="Ankit profile"
-                  fill
-                  sizes="224px"
-                  className="object-cover"
-                />
-              </div>
+          <div className="grid items-center gap-12 md:grid-cols-[1fr_1.1fr]">
+            <div className="reveal" data-reveal>
+              <AboutScene />
             </div>
 
-            <div>
+            <div className="reveal reveal-delay-1" data-reveal>
               <div className="mb-4">
                 <PastelPill
                   className="border-pink-200/70 from-pink-100/95 via-white/90 to-sky-100/90"
@@ -421,9 +500,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="relative px-6 py-24">
+      <section id="skills" className="section-anchor relative px-6 py-24">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-12 flex justify-center">
+          <div className="mb-12 flex justify-center reveal" data-reveal>
             <PastelPill
               className="border-sky-200/70 from-white/95 via-sky-50/90 to-pink-50/90 px-8 py-4 text-4xl"
               glowClass="bg-sky-200/30"
@@ -432,130 +511,62 @@ export default function Home() {
             </PastelPill>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            <GlassPanel className="min-h-[300px] p-6">
-              <div className="w-full">
-                <h3 className="mb-6 text-xl font-semibold text-black/90">
-                  Editing Stack
-                </h3>
-                <div className="grid grid-cols-2 gap-5">
-                  <ExactLogoCard
-                    href="https://www.adobe.com/products/premiere.html"
-                    label="Premiere Pro"
-                    src="/logos/premiere-pro.svg"
-                    glowClass="bg-blue-500/28"
-                  />
-                  <ExactLogoCard
-                    href="https://www.adobe.com/products/aftereffects.html"
-                    label="After Effects"
-                    src="/logos/after-effects.svg"
-                    glowClass="bg-fuchsia-500/28"
-                  />
-                  <ExactLogoCard
-                    href="https://www.adobe.com/products/photoshop.html"
-                    label="Photoshop"
-                    src="/logos/photoshop.svg"
-                    glowClass="bg-cyan-500/28"
-                  />
-                  <ExactLogoCard
-                    href="https://www.capcut.com/"
-                    label="CapCut"
-                    src="/logos/capcut.svg"
-                    glowClass="bg-zinc-400/22"
-                  />
+          <div className="grid items-stretch grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div className="reveal h-full" data-reveal>
+              <GlassPanel className="h-full min-h-[330px] p-6 tilt-hover">
+                <div className="flex h-full flex-col">
+                  <h3 className="mb-6 text-xl font-semibold text-black/90">
+                    Editing Stack
+                  </h3>
+                  <div className="grid flex-1 grid-cols-2 gap-5">
+                    <ExactLogoCard href="https://www.adobe.com/products/premiere.html" label="Premiere Pro" src="/logos/premiere-pro.svg" glowClass="bg-blue-500/28" />
+                    <ExactLogoCard href="https://www.adobe.com/products/aftereffects.html" label="After Effects" src="/logos/after-effects.svg" glowClass="bg-fuchsia-500/28" />
+                    <ExactLogoCard href="https://www.adobe.com/products/photoshop.html" label="Photoshop" src="/logos/photoshop.svg" glowClass="bg-cyan-500/28" />
+                    <ExactLogoCard href="https://www.capcut.com/" label="CapCut" src="/logos/capcut.svg" glowClass="bg-zinc-400/22" />
+                  </div>
                 </div>
-              </div>
-            </GlassPanel>
+              </GlassPanel>
+            </div>
 
-            <GlassPanel className="min-h-[300px] p-6">
-              <div className="w-full">
-                <h3 className="mb-6 text-xl font-semibold text-black/90">
-                  AI Tools
-                </h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <ExactLogoCard
-                    href="https://kling.ai/"
-                    label="Kling"
-                    src="/logos/kling.svg"
-                    glowClass="bg-blue-500/28"
-                  />
-                  <ExactLogoCard
-                    href="https://higgsfield.ai/"
-                    label="Higgsfield"
-                    src="/logos/higgsfield.svg"
-                    glowClass="bg-lime-400/28"
-                  />
-                  <ExactLogoCard
-                    href="https://grok.com/"
-                    label="Grok"
-                    src="/logos/grok.svg"
-                    glowClass="bg-zinc-400/22"
-                  />
-                  <ExactLogoCard
-                    href="https://chatgpt.com/"
-                    label="ChatGPT"
-                    src="/logos/chatgpt.svg"
-                    glowClass="bg-emerald-500/28"
-                  />
-                  <ExactLogoCard
-                    href="https://gemini.google.com/"
-                    label="Gemini"
-                    src="/logos/gemini.svg"
-                    glowClass="bg-sky-500/28"
-                  />
-                  <ExactLogoCard
-                    href="https://minimax.io/"
-                    label="MiniMax"
-                    src="/logos/minimax.svg"
-                    glowClass="bg-orange-500/28"
-                  />
+            <div className="reveal reveal-delay-1 h-full" data-reveal>
+              <GlassPanel className="h-full min-h-[330px] p-6 tilt-hover">
+                <div className="flex h-full flex-col">
+                  <h3 className="mb-6 text-xl font-semibold text-black/90">
+                    AI Tools
+                  </h3>
+                  <div className="grid flex-1 grid-cols-3 gap-4">
+                    <ExactLogoCard href="https://kling.ai/" label="Kling" src="/logos/kling.svg" glowClass="bg-blue-500/28" />
+                    <ExactLogoCard href="https://higgsfield.ai/" label="Higgsfield" src="/logos/higgsfield.svg" glowClass="bg-lime-400/28" />
+                    <ExactLogoCard href="https://grok.com/" label="Grok" src="/logos/grok.svg" glowClass="bg-zinc-400/22" />
+                    <ExactLogoCard href="https://chatgpt.com/" label="ChatGPT" src="/logos/chatgpt.svg" glowClass="bg-emerald-500/28" />
+                    <ExactLogoCard href="https://gemini.google.com/" label="Gemini" src="/logos/gemini.svg" glowClass="bg-sky-500/28" />
+                    <ExactLogoCard href="https://minimax.io/" label="MiniMax" src="/logos/minimax.svg" glowClass="bg-orange-500/28" />
+                  </div>
                 </div>
-              </div>
-            </GlassPanel>
+              </GlassPanel>
+            </div>
 
-            <GlassPanel className="min-h-[300px] p-6">
-              <div className="w-full">
-                <h3 className="mb-6 text-xl font-semibold text-black/90">
-                  Content Focus
-                </h3>
-                <div className="grid grid-cols-2 gap-5">
-                  <FocusCard
-                    href="/memes"
-                    title="Memes"
-                    onClick={saveScrollBeforeLeave}
-                    bgClass="bg-gradient-to-br from-fuchsia-300/95 via-pink-300/90 to-rose-200/85"
-                    glowClass="bg-fuchsia-400/30"
-                  />
-                  <FocusCard
-                    href="/political"
-                    title="Political"
-                    onClick={saveScrollBeforeLeave}
-                    bgClass="bg-gradient-to-br from-blue-300/95 via-cyan-300/90 to-sky-200/85"
-                    glowClass="bg-blue-400/30"
-                  />
-                  <FocusCard
-                    href="/trending"
-                    title="Reels"
-                    onClick={saveScrollBeforeLeave}
-                    bgClass="bg-gradient-to-br from-emerald-300/95 via-green-300/90 to-teal-200/85"
-                    glowClass="bg-emerald-400/30"
-                  />
-                  <FocusCard
-                    href="/ai"
-                    title="AI Visuals"
-                    onClick={saveScrollBeforeLeave}
-                    bgClass="bg-gradient-to-br from-orange-300/95 via-amber-300/90 to-yellow-200/85"
-                    glowClass="bg-orange-400/30"
-                  />
+            <div className="reveal reveal-delay-2 h-full" data-reveal>
+              <GlassPanel className="h-full min-h-[330px] p-6 tilt-hover">
+                <div className="flex h-full flex-col">
+                  <h3 className="mb-6 text-xl font-semibold text-black/90">
+                    Content Focus
+                  </h3>
+                  <div className="grid flex-1 grid-cols-2 gap-5">
+                    <FocusCard title="Memes" onClick={() => jumpToProjectSection("memes")} bgClass="bg-gradient-to-br from-fuchsia-300/95 via-pink-300/90 to-rose-200/85" glowClass="bg-fuchsia-400/30" />
+                    <FocusCard title="Political" onClick={() => jumpToProjectSection("political")} bgClass="bg-gradient-to-br from-blue-300/95 via-cyan-300/90 to-sky-200/85" glowClass="bg-blue-400/30" />
+                    <FocusCard title="Reels" onClick={() => jumpToProjectSection("trending")} bgClass="bg-gradient-to-br from-emerald-300/95 via-green-300/90 to-teal-200/85" glowClass="bg-emerald-400/30" />
+                    <FocusCard title="AI Visuals" onClick={() => jumpToProjectSection("ai")} bgClass="bg-gradient-to-br from-orange-300/95 via-amber-300/90 to-yellow-200/85" glowClass="bg-orange-400/30" />
+                  </div>
                 </div>
-              </div>
-            </GlassPanel>
+              </GlassPanel>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="relative px-6 py-24 text-center">
-        <div className="mb-6 flex justify-center">
+      <section id="contact" className="section-anchor relative px-6 py-24 text-center">
+        <div className="mb-6 flex justify-center reveal" data-reveal>
           <PastelPill
             className="border-sky-200/70 from-white/95 via-sky-50/90 to-pink-50/90 px-8 py-4 text-4xl"
             glowClass="bg-sky-200/30"
@@ -564,35 +575,23 @@ export default function Home() {
           </PastelPill>
         </div>
 
-        <p className="mb-10 text-black/60">
+        <p className="mb-10 text-black/60 reveal reveal-delay-1" data-reveal>
           Available for freelance projects, reels, memes, political edits, and
           AI video work.
         </p>
 
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
-          <ContactCard
-            href="https://instagram.com/bhayankarprani"
-            title="Instagram"
-            iconSrc="/logos/instagram.svg"
-            glowClass="bg-pink-400/24"
-            iconClassName="h-14 w-14"
-          />
+          <div className="reveal h-full" data-reveal>
+            <ContactCard href="https://instagram.com/bhayankarprani" title="Instagram" iconSrc="/logos/instagram.svg" glowClass="bg-pink-400/24" iconClassName="h-14 w-14" />
+          </div>
 
-          <ContactCard
-            href="https://wa.me/919457993196"
-            title="WhatsApp"
-            iconSrc="/logos/whatsapp.svg"
-            glowClass="bg-emerald-400/24"
-            iconClassName="h-16 w-16"
-          />
+          <div className="reveal reveal-delay-1 h-full" data-reveal>
+            <ContactCard href="https://wa.me/919457993196" title="WhatsApp" iconSrc="/logos/whatsapp.svg" glowClass="bg-emerald-400/24" iconClassName="h-16 w-16" />
+          </div>
 
-          <ContactCard
-            href="mailto:ankitsisodia812658@gmail.com"
-            title="Email"
-            iconSrc="/logos/gmail.svg"
-            glowClass="bg-blue-400/24"
-            iconClassName="h-14 w-14"
-          />
+          <div className="reveal reveal-delay-2 h-full" data-reveal>
+            <ContactCard href="mailto:ankitsisodia812658@gmail.com" title="Email" iconSrc="/logos/gmail.svg" glowClass="bg-blue-400/24" iconClassName="h-14 w-14" />
+          </div>
         </div>
       </section>
     </main>

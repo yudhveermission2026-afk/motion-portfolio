@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type GlowTheme = "pink" | "blue" | "green" | "orange";
 
 type HomePreviewVideoProps = {
   src: string;
+  poster?: string;
   label: string;
   glowTheme?: GlowTheme;
 };
 
 export default function HomePreviewVideo({
   src,
+  poster,
   label,
   glowTheme = "blue",
 }: HomePreviewVideoProps) {
@@ -20,10 +22,6 @@ export default function HomePreviewVideo({
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [showControl, setShowControl] = useState(true);
-
-  const previewSrc = useMemo(() => {
-    return src.replace(/\/preview(\d+)\.mp4$/i, "/Preview$1.png");
-  }, [src]);
 
   const glowMap: Record<GlowTheme, string> = {
     pink: "from-pink-300/30 via-fuchsia-300/20 to-rose-300/25",
@@ -131,7 +129,7 @@ export default function HomePreviewVideo({
   }, []);
 
   return (
-    <div className="group relative">
+    <div className="group relative tilt-hover" data-cursor="pointer">
       <div
         className={`pointer-events-none absolute -inset-3 rounded-[28px] bg-gradient-to-br opacity-60 blur-2xl transition duration-300 group-hover:opacity-100 ${glowMap[glowTheme]}`}
       />
@@ -139,12 +137,12 @@ export default function HomePreviewVideo({
       <div className="relative overflow-hidden rounded-[26px] border border-black/8 bg-white/68 p-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
         <div
           onClick={() => void handleToggle()}
-          className="relative overflow-hidden rounded-[20px] bg-black cursor-pointer"
+          className="relative cursor-pointer overflow-hidden rounded-[20px] bg-black"
         >
           <video
             ref={videoRef}
             src={src}
-            poster={previewSrc}
+            poster={poster}
             playsInline
             preload="metadata"
             controls={false}
@@ -161,7 +159,7 @@ export default function HomePreviewVideo({
           <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
             <div
               className={`flex h-12 w-12 items-center justify-center rounded-full border border-white/35 bg-black/35 text-white backdrop-blur-md transition-all duration-300 ${
-                showControl ? "opacity-100 scale-100" : "opacity-0 scale-90"
+                showControl ? "scale-100 opacity-100" : "scale-90 opacity-0"
               }`}
             >
               {isPlaying ? (
@@ -176,7 +174,7 @@ export default function HomePreviewVideo({
           </div>
         </div>
 
-        <div className="px-1 pt-2 text-center text-xs font-medium tracking-[0.25em] text-black/55 uppercase">
+        <div className="px-1 pt-2 text-center text-xs font-medium uppercase tracking-[0.25em] text-black/55">
           {label}
         </div>
       </div>
