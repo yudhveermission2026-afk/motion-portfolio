@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent, type TouchEvent } from "react";
 import type { SectionType, VideoItem } from "@/types/hacker";
 
 type ProjectShowcaseSection = {
@@ -34,6 +34,12 @@ type TouchPoint = {
   x: number;
   y: number;
   time: number;
+};
+
+type DotDragState = {
+  startX: number;
+  lastX: number;
+  moved: boolean;
 };
 
 const sectionCopy: Record<SectionType, string> = {
@@ -556,6 +562,8 @@ export default function ProjectsShowcase({ sections }: ProjectsShowcaseProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const wheelLockRef = useRef(false);
   const touchStartRef = useRef<TouchPoint | null>(null);
+  const dotDragRef = useRef<DotDragState | null>(null);
+  const skipDotClickRef = useRef(false);
 
   const wheelItems = useMemo<WheelItem[]>(() => {
     return sections.flatMap((section) =>
@@ -637,10 +645,12 @@ export default function ProjectsShowcase({ sections }: ProjectsShowcaseProps) {
     if (absX < 44 || absX < absY * 1.15 || elapsed > 1300) return;
     if (wheelLockRef.current) return;
 
-    const direction: 1 | -1 = deltaX < 0 ? -1 : 1;
-    const steps = absX > 230 ? 3 : absX > 145 ? 2 : 1;
-    const transitionMs = steps === 1 ? 420 : steps === 2 ? 340 : 280;
-    const lockMs = steps === 1 ? 130 : 105;
+    // Mobile swipe direction inverted to match the desktop wheel feel.
+    // Left swipe = next wheel motion, right swipe = previous wheel motion.
+    const direction: 1 | -1 = deltaX < 0 ? 1 : -1;
+    const steps = Math.min(5, Math.max(1, Math.round(absX / 74)));
+    const transitionMs = steps === 1 ? 390 : steps === 2 ? 310 : 245;
+    const lockMs = steps === 1 ? 120 : 85;
 
     wheelLockRef.current = true;
     moveWheel(direction, steps, transitionMs);
@@ -652,6 +662,66 @@ export default function ProjectsShowcase({ sections }: ProjectsShowcaseProps) {
 
   const handleTouchCancel = () => {
     touchStartRef.current = null;
+  };
+
+  const handleDotsPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (openItem || wheelItems.length === 0) return;
+
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    dotDragRef.current = {
+      startX: event.clientX,
+      lastX: event.clientX,
+      moved: false,
+    };
+  };
+
+  const handleDotsPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = dotDragRef.current;
+    if (!drag || openItem || wheelItems.length === 0) return;
+
+    const deltaX = event.clientX - drag.lastX;
+    const absDelta = Math.abs(deltaX);
+
+    if (absDelta < 30) return;
+
+    const steps = Math.min(4, Math.max(1, Math.floor(absDelta / 30)));
+    const direction: 1 | -1 = deltaX < 0 ? 1 : -1;
+
+    drag.moved = true;
+    drag.lastX = event.clientX;
+
+    closePopOut();
+    setWheelTransitionMs(220);
+    setActiveIndex((current) => loopIndex(current + direction * steps, wheelItems.length));
+  };
+
+  const handleDotsPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = dotDragRef.current;
+
+    try {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    } catch {
+      // Pointer may already be released by the browser.
+    }
+
+    if (drag?.moved) {
+      skipDotClickRef.current = true;
+      window.setTimeout(() => {
+        skipDotClickRef.current = false;
+      }, 0);
+    }
+
+    dotDragRef.current = null;
+  };
+
+  const handleDotsPointerCancel = (event: PointerEvent<HTMLDivElement>) => {
+    try {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    } catch {
+      // Pointer may already be released by the browser.
+    }
+
+    dotDragRef.current = null;
   };
 
   const jumpToSection = (sectionKey: SectionType) => {
@@ -857,13 +927,22 @@ export default function ProjectsShowcase({ sections }: ProjectsShowcaseProps) {
         })}
       </div>
 
-      <div className="relative z-40 -mt-8 flex flex-wrap items-center justify-center gap-2">
+      <div
+        className="relative z-40 -mt-8 flex flex-wrap items-center justify-center gap-2 touch-none select-none"
+        onPointerDown={handleDotsPointerDown}
+        onPointerMove={handleDotsPointerMove}
+        onPointerUp={handleDotsPointerUp}
+        onPointerCancel={handleDotsPointerCancel}
+        onLostPointerCapture={handleDotsPointerCancel}
+      >
         {wheelItems.map((item, index) => (
           <button
             key={item.id}
             type="button"
             data-cursor="pointer"
             onClick={() => {
+              if (skipDotClickRef.current) return;
+
               closePopOut();
               setWheelTransitionMs(420);
               setActiveIndex(index);
