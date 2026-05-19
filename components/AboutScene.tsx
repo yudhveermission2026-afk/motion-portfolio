@@ -103,7 +103,7 @@ export default function AboutScene() {
         />
 
         <div
-          className={`absolute left-1/2 top-[-34px] z-10 h-[132px] w-[132px] -translate-x-1/2 overflow-hidden rounded-full border border-white/80 shadow-[0_18px_30px_rgba(0,0,0,.08)] transition-all duration-500 ${
+          className={`absolute left-1/2 top-[-92px] z-10 h-[132px] w-[132px] -translate-x-1/2 overflow-hidden rounded-full border border-white/80 shadow-[0_18px_30px_rgba(0,0,0,.08)] transition-all duration-500 ${
             hover ? "-translate-y-7 scale-100 opacity-100" : "translate-y-10 scale-90 opacity-0"
           }`}
         >
