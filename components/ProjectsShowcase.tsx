@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import type { SectionType, VideoItem } from "@/types/hacker";
 
 type ProjectShowcaseSection = {
@@ -28,6 +28,12 @@ type PopOrigin = {
   y: number;
   rotate: number;
   scale: number;
+};
+
+type TouchPoint = {
+  x: number;
+  y: number;
+  time: number;
 };
 
 const sectionCopy: Record<SectionType, string> = {
@@ -549,6 +555,7 @@ function PopOutPlayer({
 export default function ProjectsShowcase({ sections }: ProjectsShowcaseProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const wheelLockRef = useRef(false);
+  const touchStartRef = useRef<TouchPoint | null>(null);
 
   const wheelItems = useMemo<WheelItem[]>(() => {
     return sections.flatMap((section) =>
@@ -587,6 +594,64 @@ export default function ProjectsShowcase({ sections }: ProjectsShowcaseProps) {
     closePopOut();
     setWheelTransitionMs(transitionMs);
     setActiveIndex((current) => loopIndex(current + direction * steps, wheelItems.length));
+  };
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (openItem || event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+    };
+  };
+
+  const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    const start = touchStartRef.current;
+    if (!start || openItem || event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+
+    if (Math.abs(deltaX) > 18 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
+      event.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+
+    if (!start || openItem || wheelItems.length === 0 || event.changedTouches.length !== 1) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const elapsed = Date.now() - start.time;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (absX < 44 || absX < absY * 1.15 || elapsed > 1300) return;
+    if (wheelLockRef.current) return;
+
+    const direction: 1 | -1 = deltaX < 0 ? -1 : 1;
+    const steps = absX > 230 ? 3 : absX > 145 ? 2 : 1;
+    const transitionMs = steps === 1 ? 420 : steps === 2 ? 340 : 280;
+    const lockMs = steps === 1 ? 130 : 105;
+
+    wheelLockRef.current = true;
+    moveWheel(direction, steps, transitionMs);
+
+    window.setTimeout(() => {
+      wheelLockRef.current = false;
+    }, lockMs);
+  };
+
+  const handleTouchCancel = () => {
+    touchStartRef.current = null;
   };
 
   const jumpToSection = (sectionKey: SectionType) => {
@@ -703,6 +768,11 @@ export default function ProjectsShowcase({ sections }: ProjectsShowcaseProps) {
       ref={panelRef}
       className="reveal relative mx-auto w-full max-w-[1480px] overflow-hidden rounded-[44px] border border-black/8 bg-white/28 px-2 pb-8 pt-8 shadow-[0_28px_70px_rgba(0,0,0,.075),inset_0_1px_0_rgba(255,255,255,.72)] backdrop-blur-xl md:px-8 md:pb-10 md:pt-10"
       data-reveal
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
+      style={{ touchAction: "pan-y" }}
     >
       <div
         className={`pointer-events-none absolute -left-20 top-10 h-72 w-72 rounded-full ${softAccentMap[activeSectionKey]} blur-[110px] transition-colors duration-700`}
