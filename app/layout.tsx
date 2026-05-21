@@ -17,7 +17,7 @@ const personJsonLd = {
   name: "Ankit Sisodia",
   alternateName: ["Made By Ankit", "MadeByAnkit", "Ankit", "Ankit Editor"],
   url: siteUrl,
-  image: `${siteUrl}/profile.png`,
+  image: `${siteUrl}/profile.jpg`,
   jobTitle: [
     "Video Editor",
     "AI Video Editor",
@@ -123,6 +123,15 @@ export const metadata: Metadata = {
 
   alternates: {
     canonical: siteUrl,
+  },
+
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.png", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/favicon.png",
   },
 
   openGraph: {
