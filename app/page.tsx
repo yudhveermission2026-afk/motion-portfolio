@@ -587,7 +587,6 @@ export default function Home() {
             </div>
 
             <video
-              src="/showreel-bg.webm"
               autoPlay
               muted
               loop
@@ -595,7 +594,16 @@ export default function Home() {
               preload="auto"
               className="absolute inset-0 z-20 h-full w-full object-cover"
               onContextMenu={(e) => e.preventDefault()}
-            />
+            >
+              <source
+                src="/showreel-bg.mov"
+                type='video/quicktime; codecs="hvc1"'
+              />
+              <source
+                src="/showreel-bg.webm"
+                type='video/webm; codecs="vp9"'
+              />
+            </video>
 
             <div className="pointer-events-none absolute inset-0 z-30 rounded-[38px] bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.08),transparent_42%)]" />
           </div>
@@ -793,7 +801,10 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="contact" className="section-anchor relative px-6 py-24 text-center">
+      <section
+        id="contact"
+        className="section-anchor relative px-6 py-24 text-center"
+      >
         <div className="mb-6 flex justify-center reveal" data-reveal>
           <PastelPill
             className="border-sky-200/70 from-white/95 via-sky-50/90 to-pink-50/90 px-8 py-4 text-4xl"
@@ -840,7 +851,10 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mx-auto mt-14 max-w-4xl reveal reveal-delay-2" data-reveal>
+        <div
+          className="mx-auto mt-14 max-w-4xl reveal reveal-delay-2"
+          data-reveal
+        >
           <p className="mx-auto max-w-3xl text-balance text-center text-sm leading-7 text-black/45 md:text-base md:leading-8">
             <span className="font-semibold text-black/65">Made By Ankit</span>{" "}
             is the video editing portfolio of Ankit Sisodia, built for
