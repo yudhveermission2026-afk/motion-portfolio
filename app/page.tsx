@@ -512,7 +512,7 @@ export default function Home() {
 
               <div className="max-w-3xl lg:-ml-2 xl:-ml-4">
                 <p className="mb-5 text-sm uppercase tracking-[0.35em] text-black/45">
-                  Ankit, Video Editor, Short-Form & AI Video Creator
+                  Ankit, Video Editor, Short Form & AI Video Creator
                 </p>
 
                 <h1 className="text-5xl font-bold leading-[0.95] text-black md:text-7xl lg:text-8xl">
@@ -523,7 +523,7 @@ export default function Home() {
                 </h1>
 
                 <p className="mx-auto mt-7 max-w-3xl text-black/65 lg:mx-0">
-                  I create high-impact social media edits, trend-driven reels,
+                  I create high impact social media edits, trend-driven reels,
                   political creatives, premium AI videos, and viral meme content
                   built to engage modern audiences.
                 </p>
@@ -581,7 +581,7 @@ export default function Home() {
               </h2>
 
               <p className="mx-auto mt-5 max-w-3xl text-base font-medium leading-7 text-black/52 md:text-lg">
-                A selection of fast-paced edits, scroll-stopping reels, campaign
+                A selection of fast-paced edits, scroll stopping reels, campaign
                 visuals, cinematic AI content, and standout storytelling.
               </p>
             </div>
@@ -643,21 +643,21 @@ export default function Home() {
 
               <div className="max-w-5xl space-y-5 text-lg leading-relaxed text-black/72">
                 <p>
-                  I’m Ankit — a video editor focused on creating social media
+                  I’m Ankit, a video editor focused on creating social media
                   content that’s built to stop the scroll and hold attention.
                 </p>
                 <p>
                   My work spans memes, political edits, trending reels, and
-                  cinematic AI visuals — all designed for platforms where speed,
+                  cinematic AI visuals all designed for platforms where speed,
                   emotion, and impact matter the most.
                 </p>
                 <p>
-                  I keep edits fast, clean, and audience-first. Strong hooks,
+                  I keep edits fast, clean, and audience first. Strong hooks,
                   sharp pacing, and instantly engaging visuals are what I build
                   every project around.
                 </p>
                 <p>
-                  I don’t just cut videos — I shape content that feels relevant,
+                  I don’t just cut videos, I shape content that feels relevant,
                   watchable, and made for today’s internet.
                 </p>
               </div>
@@ -858,7 +858,7 @@ export default function Home() {
           <p className="mx-auto max-w-3xl text-balance text-center text-sm leading-7 text-black/45 md:text-base md:leading-8">
             <span className="font-semibold text-black/65">Made By Ankit</span>{" "}
             is the video editing portfolio of Ankit Sisodia, built for
-            short-form reels, AI videos, political edits, meme content, and
+            short form reels, AI videos, political edits, meme content, and
             social media visuals.
           </p>
         </div>
