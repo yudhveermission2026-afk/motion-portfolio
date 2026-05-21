@@ -42,61 +42,6 @@ const sectionThemeMap: Record<
   },
 };
 
-function TopNav() {
-  const [visible, setVisible] = useState(true);
-  const lastScrollY = useRef(0);
-
-  useEffect(() => {
-    lastScrollY.current = window.scrollY;
-
-    const handleScroll = () => {
-      const currentY = window.scrollY;
-      const diff = currentY - lastScrollY.current;
-
-      if (currentY < 80) {
-        setVisible(true);
-      } else if (diff > 8) {
-        setVisible(false);
-      } else if (diff < -8) {
-        setVisible(true);
-      }
-
-      lastScrollY.current = currentY;
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  return (
-    <div
-      className={`fixed left-1/2 top-5 z-50 w-[min(94vw,900px)] -translate-x-1/2 transition-all duration-500 ${
-        visible ? "translate-y-0 opacity-100" : "-translate-y-28 opacity-0"
-      }`}
-    >
-      <div className="glass-nav rounded-full px-4 py-3">
-        <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4">
-          {[
-            ["Home", "#home"],
-            ["About", "#about"],
-            ["Skills", "#skills"],
-            ["Contact Me", "#contact"],
-          ].map(([label, href]) => (
-            <a
-              key={href}
-              href={href}
-              className="nav-link rounded-full px-5 py-2.5 text-base font-semibold text-black/72 transition md:text-[19px]"
-              data-cursor="pointer"
-            >
-              <span>{label}</span>
-            </a>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function PageBackdrop() {
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#f5f3ef]">
@@ -441,8 +386,6 @@ export default function Home() {
     SectionType,
     VideoItem[]
   > | null>(null);
-  const [showreelHovered, setShowreelHovered] = useState(false);
-  const showreelRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     fetchHomeSections()
@@ -532,38 +475,9 @@ export default function Home() {
     window.setTimeout(() => activateProjectTab(section), 620);
   };
 
-  const handleShowreelEnter = () => {
-    setShowreelHovered(true);
-
-    const previews = document.querySelectorAll(
-      "video[data-portfolio-preview='true']"
-    );
-
-    previews.forEach((node) => {
-      const preview = node as HTMLVideoElement;
-      preview.pause();
-      preview.currentTime = 0;
-    });
-
-    if (showreelRef.current) {
-      showreelRef.current.muted = false;
-      showreelRef.current.volume = 1;
-      showreelRef.current.play().catch(() => {});
-    }
-  };
-
-  const handleShowreelLeave = () => {
-    setShowreelHovered(false);
-
-    if (showreelRef.current) {
-      showreelRef.current.muted = true;
-    }
-  };
-
   return (
     <main className="min-h-screen bg-transparent text-black">
       <PageBackdrop />
-      <TopNav />
       <AboutSectionMusic />
 
       <section
@@ -615,6 +529,15 @@ export default function Home() {
                 </p>
 
                 <div className="mt-7 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+                  <a href="#about" data-cursor="pointer">
+                    <PastelPill
+                      className="border-violet-200/70 from-white/95 via-violet-50/90 to-pink-50/90"
+                      glowClass="bg-violet-200/30"
+                    >
+                      About
+                    </PastelPill>
+                  </a>
+
                   <a href="#skills" data-cursor="pointer">
                     <PastelPill
                       className="border-sky-200/70 from-white/95 via-sky-50/90 to-pink-50/90"
@@ -623,6 +546,7 @@ export default function Home() {
                       Explore Skills
                     </PastelPill>
                   </a>
+
                   <a href="#contact" data-cursor="pointer">
                     <PastelPill
                       className="border-pink-200/70 from-pink-100/95 via-white/90 to-sky-100/90"
@@ -645,47 +569,35 @@ export default function Home() {
       <section className="relative px-6 py-20">
         <div className="mx-auto flex max-w-6xl items-center justify-center">
           <div
-            className="group relative h-[62vh] w-full overflow-hidden rounded-[36px] border border-black/8 bg-white shadow-[0_28px_70px_rgba(0,0,0,0.10)] reveal tilt-hover"
+            className="relative h-[62vh] w-full overflow-hidden rounded-[38px] border border-white/55 bg-white/10 shadow-[0_28px_70px_rgba(0,0,0,0.09),inset_0_1px_0_rgba(255,255,255,0.65)] backdrop-blur-md reveal"
             data-reveal
-            data-cursor="pointer"
-            onMouseEnter={handleShowreelEnter}
-            onMouseLeave={handleShowreelLeave}
           >
-            <video
-              ref={showreelRef}
-              src="/showreel.mp4"
-              autoPlay
-              muted={!showreelHovered}
-              loop
-              playsInline
-              data-showreel-video="true"
-              className="absolute inset-0 h-full w-full object-cover transition-all duration-500 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-black/10" />
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.00))]" />
+            <div className="pointer-events-none absolute inset-0 rounded-[38px] bg-gradient-to-br from-white/18 via-sky-100/10 to-pink-100/14" />
+            <div className="pointer-events-none absolute inset-[10px] rounded-[30px] border border-white/45" />
 
-            <div className="pointer-events-none absolute right-5 top-5 z-20">
-              <div className="rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/90 backdrop-blur-md">
-                {showreelHovered ? "Sound On" : "Hover For Sound"}
-              </div>
-            </div>
-
-            <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center transition-all duration-500 group-hover:scale-95 group-hover:opacity-0">
-              <PastelPill
-                className="mb-4 border-fuchsia-200/70 from-fuchsia-100/90 via-pink-100/85 to-rose-100/80"
-                glowClass="bg-pink-200/40"
-              >
-                Featured Showreel
-              </PastelPill>
-
-              <h2 className="text-2xl font-semibold text-white md:text-4xl">
+            <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center px-6 text-center">
+              <h2 className="max-w-5xl text-3xl font-bold leading-tight text-black/68 md:text-5xl">
                 Social Media Edits, Political Creatives, AI Videos
               </h2>
-              <p className="mt-4 max-w-2xl text-sm text-white/80 md:text-base">
+
+              <p className="mx-auto mt-5 max-w-3xl text-base font-medium leading-7 text-black/52 md:text-lg">
                 A selection of fast-paced edits, scroll-stopping reels, campaign
                 visuals, cinematic AI content, and standout storytelling.
               </p>
             </div>
+
+            <video
+              src="/showreel-bg.webm"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              className="absolute inset-0 z-20 h-full w-full object-cover"
+              onContextMenu={(e) => e.preventDefault()}
+            />
+
+            <div className="pointer-events-none absolute inset-0 z-30 rounded-[38px] bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.08),transparent_42%)]" />
           </div>
         </div>
       </section>
