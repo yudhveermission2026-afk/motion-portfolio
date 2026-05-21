@@ -179,7 +179,11 @@ function ExactLogoCard({
         />
         <div className="relative flex h-20 w-20 items-center justify-center rounded-[24px] border border-black/8 bg-white shadow-[0_12px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.9)]">
           <div className="absolute inset-[2px] rounded-[22px] bg-white" />
-          <img src={src} alt={label} className="relative z-10 h-11 w-11 object-contain" />
+          <img
+            src={src}
+            alt={label}
+            className="relative z-10 h-11 w-11 object-contain"
+          />
         </div>
       </div>
       <p className="text-center text-xs text-black/65">{label}</p>
@@ -252,7 +256,9 @@ function ContactCard({
             <img
               src={iconSrc}
               alt={title}
-              className={`relative z-10 object-contain ${iconClassName || "h-14 w-14"}`}
+              className={`relative z-10 object-contain ${
+                iconClassName || "h-14 w-14"
+              }`}
             />
           </div>
         </a>
@@ -264,9 +270,11 @@ function ContactCard({
 function AboutSectionMusic() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fadeTimerRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
+
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
-  const [insideAbout, setInsideAbout] = useState(false);
+  const [insideMusicZone, setInsideMusicZone] = useState(false);
 
   const clearFadeTimer = () => {
     if (fadeTimerRef.current) {
@@ -275,7 +283,17 @@ function AboutSectionMusic() {
     }
   };
 
-  const fadeAudio = (targetVolume: number, shouldPauseAtEnd = false) => {
+  const stopAudioHard = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    clearFadeTimer();
+    audio.pause();
+    audio.muted = true;
+    audio.volume = 0;
+  };
+
+  const fadeAudio = (targetVolume: number, pauseAtEnd = false) => {
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -284,78 +302,132 @@ function AboutSectionMusic() {
     fadeTimerRef.current = window.setInterval(() => {
       const diff = targetVolume - audio.volume;
 
-      if (Math.abs(diff) <= 0.025) {
+      if (Math.abs(diff) <= 0.02) {
         audio.volume = targetVolume;
 
-        if (shouldPauseAtEnd) {
+        if (pauseAtEnd) {
           audio.pause();
+          audio.muted = true;
         }
 
         clearFadeTimer();
         return;
       }
 
-      audio.volume = Math.max(0, Math.min(0.35, audio.volume + diff * 0.18));
+      audio.volume = Math.max(0, Math.min(0.35, audio.volume + diff * 0.2));
     }, 40);
   };
 
+  const checkMusicZonePosition = () => {
+    const heroSection = document.getElementById("home");
+    const aboutSection = document.getElementById("about");
+    const viewportCenter = window.innerHeight * 0.5;
+
+    const isSectionAtCenter = (section: HTMLElement | null) => {
+      if (!section) return false;
+
+      const rect = section.getBoundingClientRect();
+      return rect.top < viewportCenter && rect.bottom > viewportCenter;
+    };
+
+    setInsideMusicZone(
+      isSectionAtCenter(heroSection) || isSectionAtCenter(aboutSection)
+    );
+  };
+
   useEffect(() => {
+    const audio = audioRef.current;
+
+    if (audio) {
+      audio.pause();
+      audio.muted = true;
+      audio.volume = 0;
+      audio.loop = true;
+    }
+
     const unlockAudio = () => {
       setAudioUnlocked(true);
     };
 
+    const scheduleCheck = () => {
+      if (rafRef.current) return;
+
+      rafRef.current = window.requestAnimationFrame(() => {
+        rafRef.current = null;
+        checkMusicZonePosition();
+      });
+    };
+
+    checkMusicZonePosition();
+
     window.addEventListener("pointerdown", unlockAudio, { once: true });
     window.addEventListener("keydown", unlockAudio, { once: true });
+    window.addEventListener("scroll", scheduleCheck, { passive: true });
+    window.addEventListener("resize", scheduleCheck);
 
     return () => {
       window.removeEventListener("pointerdown", unlockAudio);
       window.removeEventListener("keydown", unlockAudio);
-    };
-  }, []);
+      window.removeEventListener("scroll", scheduleCheck);
+      window.removeEventListener("resize", scheduleCheck);
 
-  useEffect(() => {
-    const aboutSection = document.getElementById("about");
-    if (!aboutSection) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setInsideAbout(Boolean(entry?.isIntersecting));
-      },
-      {
-        threshold: 0.35,
+      if (rafRef.current) {
+        window.cancelAnimationFrame(rafRef.current);
       }
-    );
 
-    observer.observe(aboutSection);
-
-    return () => observer.disconnect();
+      stopAudioHard();
+    };
   }, []);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    audio.loop = true;
-
-    if (soundEnabled && audioUnlocked && insideAbout) {
-      audio.volume = Math.max(audio.volume, 0.02);
-      audio.play().catch(() => {});
-      fadeAudio(0.35, false);
-    } else {
-      fadeAudio(0, true);
+    if (!soundEnabled) {
+      stopAudioHard();
+      return;
     }
 
-    return () => clearFadeTimer();
-  }, [soundEnabled, audioUnlocked, insideAbout]);
+    if (soundEnabled && audioUnlocked && insideMusicZone) {
+      audio.muted = false;
+      audio.volume = Math.max(audio.volume, 0.02);
+
+      audio.play().catch(() => {
+        stopAudioHard();
+      });
+
+      fadeAudio(0.35, false);
+      return;
+    }
+
+    fadeAudio(0, true);
+  }, [soundEnabled, audioUnlocked, insideMusicZone]);
+
+  const toggleSound = () => {
+    setAudioUnlocked(true);
+
+    setSoundEnabled((current) => {
+      const next = !current;
+
+      if (!next) {
+        stopAudioHard();
+      }
+
+      return next;
+    });
+  };
 
   return (
     <>
-      <audio ref={audioRef} src="/audio/about-theme.mp3" preload="auto" />
+      <audio ref={audioRef} src="/audio/about-theme.mp3" preload="none" />
 
       <button
         type="button"
         data-cursor="pointer"
-        onClick={() => setSoundEnabled((value) => !value)}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+        }}
+        onClick={toggleSound}
         className="fixed bottom-5 right-5 z-[90] rounded-full border border-black/10 bg-white/75 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-black/70 shadow-[0_14px_30px_rgba(0,0,0,.10)] backdrop-blur-xl transition hover:scale-105 hover:bg-white"
       >
         {soundEnabled ? "Sound On" : "Sound Off"}
@@ -365,7 +437,10 @@ function AboutSectionMusic() {
 }
 
 export default function Home() {
-  const [sectionsData, setSectionsData] = useState<Record<SectionType, VideoItem[]> | null>(null);
+  const [sectionsData, setSectionsData] = useState<Record<
+    SectionType,
+    VideoItem[]
+  > | null>(null);
   const [showreelHovered, setShowreelHovered] = useState(false);
   const showreelRef = useRef<HTMLVideoElement | null>(null);
 
@@ -383,7 +458,9 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const nodes = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
+    const nodes = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-reveal]")
+    );
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -429,7 +506,9 @@ export default function Home() {
     if (!workSection) return;
 
     const targetLabel = projectTabLabelMap[section].toLowerCase();
-    const buttons = Array.from(workSection.querySelectorAll<HTMLButtonElement>("button"));
+    const buttons = Array.from(
+      workSection.querySelectorAll<HTMLButtonElement>("button")
+    );
 
     const targetButton = buttons.find(
       (button) => button.textContent?.trim().toLowerCase() === targetLabel
@@ -456,7 +535,9 @@ export default function Home() {
   const handleShowreelEnter = () => {
     setShowreelHovered(true);
 
-    const previews = document.querySelectorAll("video[data-portfolio-preview='true']");
+    const previews = document.querySelectorAll(
+      "video[data-portfolio-preview='true']"
+    );
 
     previews.forEach((node) => {
       const preview = node as HTMLVideoElement;
@@ -485,41 +566,73 @@ export default function Home() {
       <TopNav />
       <AboutSectionMusic />
 
-      <section id="home" className="section-anchor relative overflow-hidden px-6 pt-24">
+      <section
+        id="home"
+        className="section-anchor relative overflow-hidden px-6 pt-24"
+      >
         <div className="mx-auto grid min-h-[calc(100vh-120px)] max-w-7xl items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="reveal text-center lg:text-left" data-reveal>
-            <p className="mb-5 text-sm uppercase tracking-[0.35em] text-black/45">
-              Ankit, Video Editor, Short-Form & AI Video Creator
-            </p>
+            <div className="flex items-start justify-center gap-0 lg:justify-start">
+              <div className="pointer-events-none relative hidden h-[660px] w-[350px] shrink-0 overflow-visible lg:block xl:h-[720px] xl:w-[385px]">
+                <div className="absolute inset-y-10 left-1/2 w-[220px] -translate-x-1/2 rounded-full bg-sky-200/30 blur-3xl" />
 
-            <h1 className="text-5xl font-bold leading-[0.95] text-black md:text-7xl lg:text-8xl">
-              I edit content
-              <span className="block text-black/75">that grabs attention</span>
-            </h1>
-
-            <p className="mx-auto mt-7 max-w-3xl text-black/65 lg:mx-0">
-              I create high-impact social media edits, trend-driven reels,
-              political creatives, premium AI videos, and viral meme content
-              built to engage modern audiences.
-            </p>
-
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-              <a href="#skills" data-cursor="pointer">
-                <PastelPill
-                  className="border-sky-200/70 from-white/95 via-sky-50/90 to-pink-50/90"
-                  glowClass="bg-sky-200/30"
+                <video
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="auto"
+                  className="relative z-10 h-full w-full translate-x-20 translate-y-[-18px] scale-[1.22] object-contain drop-shadow-[0_26px_38px_rgba(0,0,0,.14)] xl:translate-x-24 xl:translate-y-[-22px] xl:scale-[1.26]"
+                  onContextMenu={(e) => e.preventDefault()}
                 >
-                  Explore Skills
-                </PastelPill>
-              </a>
-              <a href="#contact" data-cursor="pointer">
-                <PastelPill
-                  className="border-pink-200/70 from-pink-100/95 via-white/90 to-sky-100/90"
-                  glowClass="bg-pink-200/30"
-                >
-                  Contact Me
-                </PastelPill>
-              </a>
+                  <source
+                    src="/hero-side-avatar.mov"
+                    type='video/quicktime; codecs="hvc1"'
+                  />
+                  <source
+                    src="/hero-side-avatar.webm"
+                    type='video/webm; codecs="vp9"'
+                  />
+                </video>
+              </div>
+
+              <div className="max-w-3xl lg:-ml-2 xl:-ml-4">
+                <p className="mb-5 text-sm uppercase tracking-[0.35em] text-black/45">
+                  Ankit, Video Editor, Short-Form & AI Video Creator
+                </p>
+
+                <h1 className="text-5xl font-bold leading-[0.95] text-black md:text-7xl lg:text-8xl">
+                  I edit content
+                  <span className="block text-black/75">
+                    that grabs attention
+                  </span>
+                </h1>
+
+                <p className="mx-auto mt-7 max-w-3xl text-black/65 lg:mx-0">
+                  I create high-impact social media edits, trend-driven reels,
+                  political creatives, premium AI videos, and viral meme content
+                  built to engage modern audiences.
+                </p>
+
+                <div className="mt-7 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+                  <a href="#skills" data-cursor="pointer">
+                    <PastelPill
+                      className="border-sky-200/70 from-white/95 via-sky-50/90 to-pink-50/90"
+                      glowClass="bg-sky-200/30"
+                    >
+                      Explore Skills
+                    </PastelPill>
+                  </a>
+                  <a href="#contact" data-cursor="pointer">
+                    <PastelPill
+                      className="border-pink-200/70 from-pink-100/95 via-white/90 to-sky-100/90"
+                      glowClass="bg-pink-200/30"
+                    >
+                      Contact Me
+                    </PastelPill>
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -577,7 +690,10 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="work" className="section-anchor relative px-4 py-20 md:px-6 md:py-28">
+      <section
+        id="work"
+        className="section-anchor relative px-4 py-20 md:px-6 md:py-28"
+      >
         <div className="mx-auto max-w-7xl">
           <ProjectsShowcase sections={projectSections} />
         </div>
@@ -601,26 +717,27 @@ export default function Home() {
               </div>
 
               <h2 className="mb-8 max-w-5xl text-4xl font-bold leading-[1.02] text-black md:text-6xl">
-                Editing content that feels sharp, current, and impossible to skip.
+                Editing content that feels sharp, current, and impossible to
+                skip.
               </h2>
 
               <div className="max-w-5xl space-y-5 text-lg leading-relaxed text-black/72">
                 <p>
-                  I’m Ankit, a video editor focused on creating social media content
-                  that’s built to stop the scroll and hold attention.
+                  I’m Ankit — a video editor focused on creating social media
+                  content that’s built to stop the scroll and hold attention.
                 </p>
                 <p>
-                  My work spans memes, political edits, trending reels, and cinematic
-                  AI visuals, all designed for platforms where speed, emotion, and
-                  impact matter the most.
+                  My work spans memes, political edits, trending reels, and
+                  cinematic AI visuals — all designed for platforms where speed,
+                  emotion, and impact matter the most.
                 </p>
                 <p>
-                  I keep edits fast, clean, and audience first. Strong hooks, sharp
-                  pacing, and instantly engaging visuals are what I build every
-                  project around.
+                  I keep edits fast, clean, and audience-first. Strong hooks,
+                  sharp pacing, and instantly engaging visuals are what I build
+                  every project around.
                 </p>
                 <p>
-                  I don’t just cut videos. I shape content that feels relevant,
+                  I don’t just cut videos — I shape content that feels relevant,
                   watchable, and made for today’s internet.
                 </p>
               </div>
@@ -648,10 +765,30 @@ export default function Home() {
                     Editing Stack
                   </h3>
                   <div className="grid flex-1 grid-cols-2 gap-5">
-                    <ExactLogoCard href="https://www.adobe.com/products/premiere.html" label="Premiere Pro" src="/logos/premiere-pro.svg" glowClass="bg-blue-500/28" />
-                    <ExactLogoCard href="https://www.adobe.com/products/aftereffects.html" label="After Effects" src="/logos/after-effects.svg" glowClass="bg-fuchsia-500/28" />
-                    <ExactLogoCard href="https://www.adobe.com/products/photoshop.html" label="Photoshop" src="/logos/photoshop.svg" glowClass="bg-cyan-500/28" />
-                    <ExactLogoCard href="https://www.capcut.com/" label="CapCut" src="/logos/capcut.svg" glowClass="bg-zinc-400/22" />
+                    <ExactLogoCard
+                      href="https://www.adobe.com/products/premiere.html"
+                      label="Premiere Pro"
+                      src="/logos/premiere-pro.svg"
+                      glowClass="bg-blue-500/28"
+                    />
+                    <ExactLogoCard
+                      href="https://www.adobe.com/products/aftereffects.html"
+                      label="After Effects"
+                      src="/logos/after-effects.svg"
+                      glowClass="bg-fuchsia-500/28"
+                    />
+                    <ExactLogoCard
+                      href="https://www.adobe.com/products/photoshop.html"
+                      label="Photoshop"
+                      src="/logos/photoshop.svg"
+                      glowClass="bg-cyan-500/28"
+                    />
+                    <ExactLogoCard
+                      href="https://www.capcut.com/"
+                      label="CapCut"
+                      src="/logos/capcut.svg"
+                      glowClass="bg-zinc-400/22"
+                    />
                   </div>
                 </div>
               </GlassPanel>
@@ -664,12 +801,42 @@ export default function Home() {
                     AI Tools
                   </h3>
                   <div className="grid flex-1 grid-cols-3 gap-4">
-                    <ExactLogoCard href="https://kling.ai/" label="Kling" src="/logos/kling.svg" glowClass="bg-blue-500/28" />
-                    <ExactLogoCard href="https://higgsfield.ai/" label="Higgsfield" src="/logos/higgsfield.svg" glowClass="bg-lime-400/28" />
-                    <ExactLogoCard href="https://grok.com/" label="Grok" src="/logos/grok.svg" glowClass="bg-zinc-400/22" />
-                    <ExactLogoCard href="https://chatgpt.com/" label="ChatGPT" src="/logos/chatgpt.svg" glowClass="bg-emerald-500/28" />
-                    <ExactLogoCard href="https://gemini.google.com/" label="Gemini" src="/logos/gemini.svg" glowClass="bg-sky-500/28" />
-                    <ExactLogoCard href="https://minimax.io/" label="MiniMax" src="/logos/minimax.svg" glowClass="bg-orange-500/28" />
+                    <ExactLogoCard
+                      href="https://kling.ai/"
+                      label="Kling"
+                      src="/logos/kling.svg"
+                      glowClass="bg-blue-500/28"
+                    />
+                    <ExactLogoCard
+                      href="https://higgsfield.ai/"
+                      label="Higgsfield"
+                      src="/logos/higgsfield.svg"
+                      glowClass="bg-lime-400/28"
+                    />
+                    <ExactLogoCard
+                      href="https://grok.com/"
+                      label="Grok"
+                      src="/logos/grok.svg"
+                      glowClass="bg-zinc-400/22"
+                    />
+                    <ExactLogoCard
+                      href="https://chatgpt.com/"
+                      label="ChatGPT"
+                      src="/logos/chatgpt.svg"
+                      glowClass="bg-emerald-500/28"
+                    />
+                    <ExactLogoCard
+                      href="https://gemini.google.com/"
+                      label="Gemini"
+                      src="/logos/gemini.svg"
+                      glowClass="bg-sky-500/28"
+                    />
+                    <ExactLogoCard
+                      href="https://minimax.io/"
+                      label="MiniMax"
+                      src="/logos/minimax.svg"
+                      glowClass="bg-orange-500/28"
+                    />
                   </div>
                 </div>
               </GlassPanel>
@@ -682,10 +849,30 @@ export default function Home() {
                     Content Focus
                   </h3>
                   <div className="grid flex-1 grid-cols-2 gap-5">
-                    <FocusCard title="Memes" onClick={() => jumpToProjectSection("memes")} bgClass="bg-gradient-to-br from-fuchsia-300/95 via-pink-300/90 to-rose-200/85" glowClass="bg-fuchsia-400/30" />
-                    <FocusCard title="Political" onClick={() => jumpToProjectSection("political")} bgClass="bg-gradient-to-br from-blue-300/95 via-cyan-300/90 to-sky-200/85" glowClass="bg-blue-400/30" />
-                    <FocusCard title="Reels" onClick={() => jumpToProjectSection("trending")} bgClass="bg-gradient-to-br from-emerald-300/95 via-green-300/90 to-teal-200/85" glowClass="bg-emerald-400/30" />
-                    <FocusCard title="AI Visuals" onClick={() => jumpToProjectSection("ai")} bgClass="bg-gradient-to-br from-orange-300/95 via-amber-300/90 to-yellow-200/85" glowClass="bg-orange-400/30" />
+                    <FocusCard
+                      title="Memes"
+                      onClick={() => jumpToProjectSection("memes")}
+                      bgClass="bg-gradient-to-br from-emerald-300/95 via-green-300/90 to-teal-200/85"
+                      glowClass="bg-emerald-400/30"
+                    />
+                    <FocusCard
+                      title="Political"
+                      onClick={() => jumpToProjectSection("political")}
+                      bgClass="bg-gradient-to-br from-fuchsia-300/95 via-pink-300/90 to-rose-200/85"
+                      glowClass="bg-pink-400/30"
+                    />
+                    <FocusCard
+                      title="Reels"
+                      onClick={() => jumpToProjectSection("trending")}
+                      bgClass="bg-gradient-to-br from-blue-300/95 via-cyan-300/90 to-sky-200/85"
+                      glowClass="bg-cyan-400/30"
+                    />
+                    <FocusCard
+                      title="AI Visuals"
+                      onClick={() => jumpToProjectSection("ai")}
+                      bgClass="bg-gradient-to-br from-orange-300/95 via-amber-300/90 to-yellow-200/85"
+                      glowClass="bg-orange-400/30"
+                    />
                   </div>
                 </div>
               </GlassPanel>
@@ -711,16 +898,43 @@ export default function Home() {
 
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
           <div className="reveal h-full" data-reveal>
-            <ContactCard href="https://instagram.com/bhayankarprani" title="Instagram" iconSrc="/logos/instagram.svg" glowClass="bg-pink-400/24" iconClassName="h-14 w-14" />
+            <ContactCard
+              href="https://instagram.com/bhayankarprani"
+              title="Instagram"
+              iconSrc="/logos/instagram.svg"
+              glowClass="bg-pink-400/24"
+              iconClassName="h-14 w-14"
+            />
           </div>
 
           <div className="reveal reveal-delay-1 h-full" data-reveal>
-            <ContactCard href="https://wa.me/919457993196" title="WhatsApp" iconSrc="/logos/whatsapp.svg" glowClass="bg-emerald-400/24" iconClassName="h-16 w-16" />
+            <ContactCard
+              href="https://wa.me/919457993196"
+              title="WhatsApp"
+              iconSrc="/logos/whatsapp.svg"
+              glowClass="bg-emerald-400/24"
+              iconClassName="h-16 w-16"
+            />
           </div>
 
           <div className="reveal reveal-delay-2 h-full" data-reveal>
-            <ContactCard href="mailto:ankitsisodia812658@gmail.com" title="Email" iconSrc="/logos/gmail.svg" glowClass="bg-blue-400/24" iconClassName="h-14 w-14" />
+            <ContactCard
+              href="mailto:ankitsisodia812658@gmail.com"
+              title="Email"
+              iconSrc="/logos/gmail.svg"
+              glowClass="bg-blue-400/24"
+              iconClassName="h-14 w-14"
+            />
           </div>
+        </div>
+
+        <div className="mx-auto mt-14 max-w-4xl reveal reveal-delay-2" data-reveal>
+          <p className="mx-auto max-w-3xl text-balance text-center text-sm leading-7 text-black/45 md:text-base md:leading-8">
+            <span className="font-semibold text-black/65">Made By Ankit</span>{" "}
+            is the video editing portfolio of Ankit Sisodia, built for
+            short-form reels, AI videos, political edits, meme content, and
+            social media visuals.
+          </p>
         </div>
       </section>
     </main>
