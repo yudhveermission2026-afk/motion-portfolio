@@ -22,11 +22,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-body.has-fancy-cursor,
-body.has-fancy-cursor * {
-  cursor: none !important;
-}
-
 ::selection {
   background: rgba(255, 255, 255, 0.75);
   color: #111;
@@ -73,11 +68,13 @@ body.has-fancy-cursor * {
 }
 
 .tilt-hover:hover {
-  transform: perspective(1200px) rotateX(2.5deg) rotateY(-2.5deg) translateY(-2px) scale(1.008);
+  transform: perspective(1200px) rotateX(2.5deg) rotateY(-2.5deg)
+    translateY(-2px) scale(1.008);
 }
 
 .tilt-hover:active {
-  transform: perspective(1200px) rotateX(0deg) rotateY(0deg) translateY(0) scale(0.995);
+  transform: perspective(1200px) rotateX(0deg) rotateY(0deg) translateY(0)
+    scale(0.995);
 }
 
 .glass-nav {
@@ -128,30 +125,4 @@ body.has-fancy-cursor * {
 .nav-link > span {
   position: relative;
   z-index: 1;
-}
-
-.cursor-ring {
-  border: 1px solid rgba(0, 0, 0, 0.16);
-  background: rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition:
-    width 120ms ease,
-    height 120ms ease,
-    background-color 120ms ease,
-    border-color 120ms ease;
-}
-
-.cursor-ring.cursor-ring-active {
-  width: 42px;
-  height: 42px;
-  border-color: rgba(0, 0, 0, 0.26);
-  background: rgba(255, 255, 255, 0.22);
-}
-
-@media (hover: none), (pointer: coarse) {
-  body.has-fancy-cursor,
-  body.has-fancy-cursor * {
-    cursor: auto !important;
-  }
 }
